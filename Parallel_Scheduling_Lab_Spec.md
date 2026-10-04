@@ -359,8 +359,10 @@ The project therefore includes meaningful frontend–backend communication and d
 
 
 
-//scan to be added???
-//still thinking on how to 
+//Since map and reduce allowed only, we no dependency needed to be specified by the user
+
 
 // questions: 1 database  2 login and security
 
+
+//scan to be added???
