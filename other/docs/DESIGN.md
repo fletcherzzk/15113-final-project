@@ -53,6 +53,28 @@ and owner IDs. Loading restores the stored configuration and results.
 
 ## Interface
 
+Map displays two policy options: Fixed order and **Longest Task First / Critical
+Path First**. A Map task has no successors, so rank equals duration and the latter
+two priorities yield identical schedules. The combined choice uses the existing
+`longest` API policy; saved Map experiments using `critical` load into the same
+choice without being marked as changed. D&C continues to expose all three
+existing policies separately. Comparison counts and labels follow the displayed
+experiment even while edited inputs await a new run.
+
+Typography and spacing are moderately larger than the initial interface while
+preserving its layout: a 350px desktop sidebar, 310px on tablets, and stacked
+panels only at the original 760px mobile breakpoint. Body text is 18px; help text
+is 15px, and card/table labels are 15–17px. The hero retains its original 51px
+maximum so it does not dominate the working area. Cards, fields, table rows, and
+dialogs provide room for larger text without fixed content heights.
+
+Native policy/preset selects keep their keyboard and accessibility behavior;
+an aria-hidden visible value wraps long labels instead of truncating them.
+Comparison policy names also wrap. Narrow screens let headers/actions reflow,
+use one column for task details and D&C costs when needed, and allow dialogs to
+scroll within the viewport. Timeline rows and graph nodes provide space for
+larger labels; charts scroll instead of shrinking text to illegible sizes.
+
 One timeline SVG contains every processor row on a shared scale:
 `x(t) = left + t/T × width`. Shared ticks/row extents align concurrency. Idle
 segments are hatched. Horizontal scrolling preserves readability on small

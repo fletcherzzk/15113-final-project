@@ -12,6 +12,8 @@
   --combine:#b4a0c3;
   --radius:14px;
   font-family:Inter,"Segoe UI",Arial,sans-serif;
+  font-size:18px;
+  line-height:1.5;
   color:var(--ink);
   background:var(--paper);
   font-synthesis:none
@@ -54,22 +56,63 @@ h1,h2,h3,p {
   margin:0
 }
 h2 {
-  font-size:17px;
+  font-size:21px;
   font-weight:650;
   letter-spacing:-.4px
 }
 h3 {
-  font-size:16px;
+  font-size:19px;
   font-weight:650
 }
 input,textarea,select {
   width:100%;
+  min-width:0;
   border:1px solid var(--line);
   background:#fff;
   color:var(--ink);
   border-radius:7px;
-  padding:10px 11px;
-  min-height:42px
+  padding:11px 12px;
+  line-height:1.4;
+  min-height:48px
+}
+/* The native select keeps keyboard/focus behavior; its visible value can wrap. */
+.select-field {
+  display:grid;
+  position:relative;
+  min-width:0
+}
+.select-field select,.select-value {
+  grid-area:1 / 1;
+  padding:11px 38px 11px 12px;
+  min-height:48px;
+  line-height:1.4
+}
+.select-field select {
+  appearance:none;
+  color:transparent;
+  cursor:pointer
+}
+.select-field option {
+  color:var(--ink);
+  background:var(--white)
+}
+.select-value {
+  position:relative;
+  align-self:center;
+  pointer-events:none;
+  overflow-wrap:anywhere
+}
+.select-field:after {
+  content:'▾';
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  pointer-events:none;
+  color:var(--green)
+}
+.select-field select:disabled+.select-value {
+  color:var(--muted)
 }
 textarea {
   resize:vertical;
@@ -78,9 +121,9 @@ textarea {
 }
 label,legend {
   display:block;
-  font-size:12px;
+  font-size:16px;
   font-weight:650;
-  margin-bottom:8px
+  margin-bottom:9px
 }
 label:not(:first-child) {
   margin-top:18px
@@ -96,11 +139,11 @@ fieldset {
   align-items:center;
   gap:12px;
   border-radius:7px;
-  padding:11px 17px;
+  padding:12px 18px;
   border:1px solid transparent;
-  font-size:13px;
+  font-size:17px;
   font-weight:650;
-  min-height:42px
+  min-height:48px
 }
 .primary {
   background:var(--green);
@@ -119,9 +162,9 @@ fieldset {
   background:#f0f4ee
 }
 .small {
-  font-size:12px;
-  min-height:34px;
-  padding:7px 12px
+  font-size:16px;
+  min-height:40px;
+  padding:8px 13px
 }
 .full {
   width:100%
@@ -131,15 +174,16 @@ fieldset {
   background:none;
   padding:8px;
   color:var(--green);
-  font-size:12px;
+  font-size:17px;
   font-weight:650
 }
 .site-header {
-  height:82px;
+  min-height:82px;
   display:flex;
+  flex-wrap:wrap;
   align-items:center;
   justify-content:space-between;
-  padding:0 5%;
+  padding:12px 5%;
   border-bottom:1px solid var(--line);
   gap:24px
 }
@@ -147,7 +191,7 @@ fieldset {
   display:flex;
   gap:10px;
   align-items:center;
-  font-size:19px;
+  font-size:22px;
   letter-spacing:-.6px
 }
 .brand strong {
@@ -155,74 +199,101 @@ fieldset {
 }
 .brand-mark {
   display:grid;
+  flex-shrink:0;
   place-items:center;
   background:var(--green);
   color:white;
-  width:34px;
-  height:34px;
+  width:40px;
+  height:40px;
   border-radius:8px;
-  font-size:27px;
+  font-size:33px;
   font-weight:600
 }
 .header-label {
-  font-size:10px;
+  font-size:15px;
   letter-spacing:2px;
   color:var(--muted)
 }
 .account-controls {
   display:flex;
+  flex-wrap:wrap;
+  max-width:100%;
   gap:12px;
   align-items:center;
-  font-size:12px;
+  font-size:17px;
   color:var(--muted)
+}
+.account-controls>span {
+  min-width:0;
+  max-width:22ch;
+  overflow-wrap:anywhere
 }
 main {
   max-width:1390px;
-  padding:46px 5% 40px;
+  padding:36px clamp(20px,3.2vw,44px) 40px;
   margin:0 auto
 }
 .page-heading {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:50px;
-  margin-bottom:42px
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:24px;
+  margin-bottom:32px
+}
+.page-heading>div:first-child {
+  flex:1;
+  min-width:0
 }
 .eyebrow {
-  font-size:10px;
+  font-size:15px;
   letter-spacing:2px;
   color:var(--green);
   font-weight:700;
   margin-bottom:14px
 }
 h1 {
-  font-size:clamp(34px,3.8vw,51px);
-  line-height:1.07;
-  letter-spacing:-2.5px;
+  font-size:clamp(32px,3.8vw,51px);
+  line-height:1.12;
+  letter-spacing:-1.8px;
+  overflow-wrap:anywhere;
   font-weight:650
 }
 .intro {
-  font-size:14px;
-  line-height:1.65;
+  font-size:18px;
+  line-height:1.55;
   color:var(--muted);
-  max-width:540px;
+  max-width:none;
   margin-top:17px
 }
 .model-note {
-  border-left:1px solid var(--line);
-  padding:6px 0 6px 25px;
-  font-size:10px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:16px 32px;
+  border-top:1px solid var(--line);
+  padding-top:20px;
+  min-width:0;
+  font-size:18px;
   letter-spacing:1.1px;
-  white-space:nowrap
+  white-space:normal
 }
-.model-note p {
-  font-size:12px;
-  line-height:1.8;
+.model-note-title {
+  flex:0 0 auto
+}
+.model-note .model-conditions {
+  flex:1 1 360px;
+  font-size:20px;
+  line-height:1.6;
   letter-spacing:0;
-  margin:11px 0 8px
+  margin:0;
+  padding-left:1.2em;
+  list-style:disc
+}
+.model-conditions li::marker {
+  font-weight:900;
+  font-size:1.1em
 }
 .model-note>span:last-child {
-  font-size:10px;
+  font-size:18px;
   letter-spacing:0;
   color:var(--muted)
 }
@@ -236,8 +307,8 @@ h1 {
 }
 .workspace {
   display:grid;
-  grid-template-columns:310px minmax(0,1fr);
-  gap:26px;
+  grid-template-columns:350px minmax(0,1fr);
+  gap:24px;
   align-items:start
 }
 .panel {
@@ -246,9 +317,13 @@ h1 {
   background:var(--white)
 }
 .configuration {
-  padding:23px;
+  padding:24px;
+  min-width:0;
   position:sticky;
   top:20px
+}
+.results {
+  min-width:0
 }
 .section-heading {
   display:flex;
@@ -259,11 +334,11 @@ h1 {
   display:inline-grid;
   place-items:center;
   color:var(--muted);
-  font-size:10px;
+  font-size:15px;
   border:1px solid var(--line);
   border-radius:4px;
-  min-width:23px;
-  height:23px;
+  min-width:29px;
+  height:29px;
   font-variant-numeric:tabular-nums
 }
 .configuration .section-heading {
@@ -278,9 +353,11 @@ h1 {
   margin-bottom:10px
 }
 .form-selector label {
+  display:flex;
   margin:0;
   flex:1;
-  font-size:11px;
+  min-width:0;
+  font-size:16px;
   position:relative
 }
 .form-selector input {
@@ -290,12 +367,16 @@ h1 {
   width:1px
 }
 .form-selector span {
-  display:block;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
   text-align:center;
-  padding:11px 5px;
+  padding:12px 8px;
+  min-height:48px;
   border:1px solid var(--line);
   background:#f8f9f5;
-  white-space:nowrap
+  white-space:normal
 }
 .form-selector label:first-of-type span {
   border-radius:7px 0 0 7px
@@ -320,23 +401,26 @@ h1 {
   margin-top:22px
 }
 .help {
-  font-size:11px;
+  font-size:15px;
   color:var(--muted);
-  line-height:1.7;
+  line-height:1.5;
   margin-top:7px
 }
 .field-grid {
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px
 }
 .field-grid.three {
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:7px;
+  gap:10px;
   margin-top:18px
 }
 .field-grid.three label {
-  font-size:10px
+  font-size:15px;
+  min-height:3em;
+  display:flex;
+  align-items:flex-end
 }
 .task-count {
   display:flex;
@@ -345,11 +429,11 @@ h1 {
   align-items:center
 }
 .task-count span:first-child {
-  font-size:27px;
+  font-size:33px;
   letter-spacing:-1px
 }
 .task-count span:last-child {
-  font-size:9px;
+  font-size:14px;
   color:var(--muted);
   margin-top:3px
 }
@@ -359,12 +443,12 @@ h1 {
 }
 .configuration-note {
   text-align:center;
-  font-size:10px;
+  font-size:15px;
   color:var(--muted);
   margin-top:10px
 }
 .input-error {
-  font-size:12px;
+  font-size:17px;
   line-height:1.5;
   color:#a23528;
   background:#fff0eb;
@@ -374,13 +458,14 @@ h1 {
 }
 .results-top {
   display:flex;
+  flex-wrap:wrap;
   justify-content:space-between;
   align-items:center;
   gap:12px;
   margin:3px 0 19px
 }
 .result-label {
-  font-size:10px;
+  font-size:15px;
   color:var(--muted);
   letter-spacing:.4px
 }
@@ -393,17 +478,19 @@ h1 {
 .metric {
   border:1px solid var(--line);
   border-radius:10px;
-  padding:16px;
+  padding:18px;
+  min-width:0;
+  overflow-wrap:anywhere;
   background:#fff
 }
 .metric span {
-  font-size:10px;
+  font-size:16px;
   color:var(--muted);
   display:block
 }
 .metric strong {
   display:block;
-  font-size:28px;
+  font-size:32px;
   line-height:1.1;
   font-weight:600;
   letter-spacing:-1px;
@@ -412,7 +499,7 @@ h1 {
 }
 .metric small {
   display:block;
-  font-size:9px;
+  font-size:14px;
   color:var(--muted);
   margin-top:7px
 }
@@ -425,13 +512,14 @@ h1 {
   color:#c8ded0
 }
 .timeline-panel,.comparison-panel {
-  padding:22px;
-  margin-bottom:17px
+  padding:24px;
+  margin-bottom:20px
 }
 .panel-top {
   display:flex;
   justify-content:space-between;
   align-items:start;
+  flex-wrap:wrap;
   gap:10px
 }
 .panel-top .help {
@@ -439,7 +527,7 @@ h1 {
 }
 .mono {
   font-family:Consolas,monospace;
-  font-size:11px;
+  font-size:16px;
   color:var(--muted);
   white-space:nowrap
 }
@@ -447,7 +535,7 @@ h1 {
   display:flex;
   gap:14px;
   flex-wrap:wrap;
-  font-size:10px;
+  font-size:15px;
   color:var(--muted);
   margin:20px 0 15px
 }
@@ -488,11 +576,11 @@ h1 {
   display:block;
   width:100%;
   height:auto;
-  min-width:560px
+  min-width:720px
 }
 .tick-label,.processor-label {
   font-family:Consolas,monospace;
-  font-size:11px;
+  font-size:18px;
   fill:var(--muted)
 }
 .processor-label {
@@ -533,14 +621,14 @@ h1 {
 .task-label {
   font-family:Consolas,monospace;
   fill:#1d3330;
-  font-size:11px;
+  font-size:18px;
   font-weight:600;
   pointer-events:none
 }
 .task-detail {
-  padding-top:14px;
+  padding-top:16px;
   border-top:1px solid var(--line);
-  font-size:11px;
+  font-size:16px;
   line-height:1.8;
   color:var(--muted);
   min-height:52px
@@ -548,7 +636,8 @@ h1 {
 .detail-grid {
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:8px
+  gap:12px;
+  overflow-wrap:anywhere
 }
 .detail-grid strong {
   display:block;
@@ -559,7 +648,7 @@ h1 {
   display:block
 }
 .tag {
-  font-size:8px;
+  font-size:14px;
   font-weight:600;
   letter-spacing:1px;
   color:var(--muted);
@@ -572,32 +661,39 @@ table {
   width:100%;
   border-collapse:collapse;
   text-align:left;
-  font-size:11px;
-  margin:18px 0 12px;
+  font-size:17px;
+  min-width:560px;
+  margin:20px 0 14px;
   font-variant-numeric:tabular-nums
 }
 th {
-  font-size:9px;
+  font-size:15px;
   color:var(--muted);
   font-weight:500;
   border-bottom:1px solid var(--line);
-  padding:0 6px 10px;
+  padding:0 8px 12px;
   white-space:nowrap
 }
 td {
-  padding:12px 6px;
+  padding:14px 8px;
   border-bottom:1px solid #eef0e9;
   white-space:nowrap
 }
 td:first-child {
+  width:40%;
+  min-width:180px;
+  max-width:280px;
+  white-space:normal;
+  overflow-wrap:anywhere;
   font-weight:600
 }
 tr.selected-policy {
   background:#f2f6ef
 }
 .fastest {
-  font-size:8px;
-  margin-left:5px;
+  display:inline-block;
+  font-size:14px;
+  margin-left:6px;
   color:var(--green);
   font-weight:500
 }
@@ -605,10 +701,10 @@ tr.selected-policy {
   background:none;
   border:1px solid var(--line);
   border-radius:4px;
-  font-size:10px;
+  font-size:15px;
   color:var(--green);
-  padding:5px 8px;
-  min-height:29px
+  padding:8px 10px;
+  min-height:38px
 }
 .dag-panel {
   margin-bottom:17px
@@ -618,8 +714,8 @@ tr.selected-policy {
   align-items:center;
   justify-content:space-between;
   cursor:pointer;
-  padding:18px 22px;
-  font-size:12px;
+  padding:20px 24px;
+  font-size:17px;
   font-weight:650;
   gap:12px;
   list-style:none
@@ -636,6 +732,8 @@ tr.selected-policy {
 }
 .dag-panel summary>span:first-child {
   display:flex;
+  min-width:0;
+  overflow-wrap:anywhere;
   gap:10px;
   align-items:center
 }
@@ -644,7 +742,7 @@ tr.selected-policy {
   margin:0
 }
 .dag-body {
-  padding:0 22px 20px
+  padding:0 24px 24px
 }
 .dag-scroll {
   margin-top:15px
@@ -661,25 +759,26 @@ tr.selected-policy {
   fill:none
 }
 .dag-label {
-  font-size:10px;
+  font-size:16px;
   font-family:Consolas,monospace;
   fill:var(--ink);
   pointer-events:none
 }
 .dag-subtitle {
-  font-size:9px;
+  font-size:15px;
   fill:#35483e;
   pointer-events:none
 }
 .save-panel {
-  padding:20px 22px;
+  padding:24px;
   display:flex;
   align-items:center;
   justify-content:space-between;
+  flex-wrap:wrap;
   gap:20px
 }
 .save-panel h3 {
-  font-size:13px
+  font-size:18px
 }
 .save-panel .help {
   margin-top:3px;
@@ -687,16 +786,18 @@ tr.selected-policy {
 }
 .save-panel form {
   display:flex;
-  gap:8px;
-  flex:1;
-  max-width:350px
+  gap:12px;
+  flex:1 1 300px;
+  min-width:0;
+  max-width:420px
 }
 .save-panel input {
-  font-size:11px;
+  font-size:17px;
   min-width:0
 }
 .save-panel .button {
-  font-size:11px
+  flex-shrink:0;
+  font-size:17px
 }
 .history-section {
   margin-top:38px;
@@ -706,36 +807,39 @@ tr.selected-policy {
 .history-grid {
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:13px
+  gap:16px
 }
 .history-card {
-  padding:18px;
+  padding:22px;
   background:#fff;
   border:1px solid var(--line);
   border-radius:10px;
   min-width:0
 }
 .history-card h3 {
-  font-size:13px;
+  font-size:18px;
   overflow-wrap:anywhere;
   margin-bottom:6px
 }
 .history-meta {
-  font-size:10px;
+  font-size:16px;
+  overflow-wrap:anywhere;
   color:var(--muted);
   line-height:1.8
 }
 .history-actions {
   display:flex;
+  flex-wrap:wrap;
   gap:10px;
   margin-top:13px
 }
 .history-actions button {
-  font-size:10px;
+  font-size:15px;
   background:none;
   border:0;
   color:var(--green);
-  padding:4px 0
+  padding:7px 0;
+  min-height:38px
 }
 .history-actions button:last-child {
   margin-left:auto;
@@ -747,7 +851,7 @@ tr.selected-policy {
   padding:20px 0
 }
 .model-explainer summary {
-  font-size:12px;
+  font-size:17px;
   cursor:pointer;
   display:flex;
   justify-content:space-between;
@@ -756,12 +860,12 @@ tr.selected-policy {
 }
 .explanation-grid {
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:minmax(0,1fr);
   gap:20px;
   padding-top:22px
 }
 .explanation-grid p {
-  font-size:11px;
+  font-size:16px;
   line-height:1.8;
   color:var(--muted)
 }
@@ -770,14 +874,16 @@ tr.selected-policy {
 }
 footer {
   border-top:1px solid var(--line);
-  padding:20px 5%;
+  padding:22px clamp(20px,3.2vw,44px);
   display:flex;
+  flex-wrap:wrap;
+  gap:12px;
   justify-content:space-between;
   color:var(--muted);
-  font-size:10px
+  font-size:15px
 }
 .notice {
-  font-size:12px;
+  font-size:17px;
   padding:13px 16px;
   background:var(--green-light);
   border:1px solid #bccdbc;
@@ -791,7 +897,7 @@ footer {
   color:#962e22
 }
 .stale-note {
-  font-size:11px;
+  font-size:16px;
   color:#8c6229;
   margin-bottom:14px;
   padding:9px 12px;
@@ -803,24 +909,26 @@ footer {
   text-align:center
 }
 .empty-state h3 {
-  font-size:20px;
+  font-size:25px;
   margin-top:20px
 }
 .empty-state p {
   color:var(--muted);
-  font-size:13px;
+  font-size:18px;
   line-height:1.8;
   margin-top:12px
 }
 .empty-symbol {
-  font-size:48px;
+  font-size:56px;
   color:#a6b9a4
 }
 dialog {
   border:1px solid var(--line);
   border-radius:16px;
   padding:28px;
-  width:420px;
+  width:480px;
+  max-height:calc(100vh - 32px);
+  overflow-y:auto;
   max-width:calc(100% - 32px);
   box-shadow:0 20px 80px #18261c33;
   background:var(--paper);
@@ -834,13 +942,17 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap:16px;
   margin-bottom:22px
 }
 .dialog-header h2 {
-  font-size:22px
+  font-size:25px;
+  min-width:0;
+  overflow-wrap:anywhere
 }
 .close-button {
-  font-size:25px;
+  flex-shrink:0;
+  font-size:30px;
   line-height:1;
   border:0;
   background:none;
@@ -857,8 +969,8 @@ dialog::backdrop {
   background:none;
   border:0;
   border-bottom:2px solid transparent;
-  padding:10px;
-  font-size:13px;
+  padding:12px;
+  font-size:18px;
   color:var(--muted)
 }
 .auth-tabs button.active {
@@ -873,6 +985,7 @@ dialog form>.help:last-child {
 }
 .dialog-actions {
   display:flex;
+  flex-wrap:wrap;
   justify-content:flex-end;
   gap:8px;
   margin-top:20px
@@ -881,7 +994,7 @@ dialog form>.help:last-child {
   margin:0
 }
 #edit-description {
-  font-size:13px;
+  font-size:18px;
   line-height:1.6;
   overflow-wrap:anywhere;
   margin-bottom:18px
@@ -896,8 +1009,8 @@ dialog form>.help:last-child {
 }
 @media(min-width:1450px) {
   .site-header,footer {
-    padding-left:calc((100vw - 1251px)/2);
-    padding-right:calc((100vw - 1251px)/2)
+    padding-left:calc((100vw - 1302px)/2);
+    padding-right:calc((100vw - 1302px)/2)
   }
 }
 @media(max-width:1050px) {
@@ -905,8 +1018,8 @@ dialog form>.help:last-child {
     display:none
   }
   .workspace {
-    grid-template-columns:280px minmax(0,1fr);
-    gap:18px
+    grid-template-columns:310px minmax(0,1fr);
+    gap:20px
   }
   .configuration {
     padding:20px
@@ -915,15 +1028,16 @@ dialog form>.help:last-child {
     grid-template-columns:repeat(2,minmax(0,1fr))
   }
   .metric strong {
-    font-size:27px
+    font-size:32px
   }
   .save-panel {
     flex-direction:column;
-    align-items:start
+    align-items:stretch
   }
   .save-panel form {
     max-width:none;
-    width:100%
+    width:100%;
+    flex:0 1 auto
   }
   .detail-grid {
     grid-template-columns:repeat(2,minmax(0,1fr))
@@ -937,8 +1051,10 @@ dialog form>.help:last-child {
 }
 @media(max-width:760px) {
   .site-header {
-    height:68px;
-    padding:0 20px
+    min-height:78px;
+    flex-wrap:wrap;
+    gap:12px;
+    padding:12px 20px
   }
   .account-controls {
     gap:8px
@@ -947,11 +1063,11 @@ dialog form>.help:last-child {
     display:none
   }
   .brand {
-    font-size:17px
+    font-size:22px
   }
   .brand-mark {
-    height:30px;
-    width:30px
+    height:36px;
+    width:36px
   }
   main {
     padding:30px 20px
@@ -961,24 +1077,19 @@ dialog form>.help:last-child {
     margin-bottom:28px
   }
   h1 {
-    font-size:39px
+    font-size:clamp(30px,5.2vw,39px)
   }
   .intro {
-    font-size:13px
+    font-size:18px
   }
   .model-note {
     margin-top:24px;
-    padding:0;
-    border:0;
+    padding-top:18px;
     white-space:normal
   }
-  .model-note p {
-    display:inline;
-    margin-left:10px;
-    font-size:11px
-  }
-  .model-note p br {
-    display:none
+  .model-note .model-conditions {
+    flex-basis:100%;
+    font-size:18px
   }
   .model-note>span:last-child {
     display:block;
@@ -992,7 +1103,7 @@ dialog form>.help:last-child {
     position:static
   }
   .form-selector span {
-    font-size:13px
+    font-size:16px
   }
   .configuration .input-section {
     padding-top:17px
@@ -1004,10 +1115,10 @@ dialog form>.help:last-child {
     flex-wrap:wrap
   }
   .timeline-panel,.comparison-panel {
-    padding:17px
+    padding:20px
   }
   .dag-panel summary {
-    padding:17px
+    padding:20px
   }
   .dag-panel summary .help {
     display:none
@@ -1022,12 +1133,59 @@ dialog form>.help:last-child {
     padding:50px 20px
   }
   .save-panel {
-    padding:17px
+    padding:20px
   }
   footer {
     padding:20px;
-    font-size:9px;
-    gap:10px
+    font-size:15px;
+    gap:12px
+  }
+}
+@media(max-width:380px) {
+  main {
+    padding-inline:16px
+  }
+  .configuration,.timeline-panel,.comparison-panel,.save-panel {
+    padding:16px
+  }
+  .metric {
+    padding:14px
+  }
+  .metric strong {
+    font-size:28px
+  }
+  .detail-grid {
+    grid-template-columns:minmax(0,1fr)
+  }
+  .field-grid.three {
+    grid-template-columns:minmax(0,1fr)
+  }
+  .field-grid.three label {
+    min-height:0
+  }
+  .dag-panel summary {
+    padding:16px
+  }
+  .dag-body {
+    padding:0 16px 16px
+  }
+  dialog {
+    padding:20px
+  }
+}
+@media(forced-colors:active) {
+  .select-field select {
+    forced-color-adjust:none;
+    color:transparent;
+    background:Canvas;
+    border-color:ButtonText
+  }
+  .select-field option {
+    color:CanvasText;
+    background:Canvas
+  }
+  .select-value,.select-field:after {
+    color:CanvasText
   }
 }
 @media(prefers-reduced-motion:no-preference) {

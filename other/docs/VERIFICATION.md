@@ -22,9 +22,11 @@
 | Aligned primary timeline | Frontend test checks common SVG axis and identical row extents |
 | Collapsible supporting DAG | Nodes/joins render; collapsing leaves the timeline present |
 | UI history and validation | Register/save/load/rename/delete/login, stale state, invalid inputs |
+| Map policy equivalence | Two options/rows with a combined label; saved `critical` Map loads cleanly; rerun uses `longest` |
+| D&C policy separation | Three options/rows; critical remains independently selectable; unrun edits retain prior comparisons |
 | Safe text/network errors | HTML-like names remain text; fetch failures release buttons |
 
-Verification: **91 Python tests and 7 Node/JSDOM/frontend build tests passed**;
+Verification: **91 Python tests and 8 Node/JSDOM/frontend build tests passed**;
 JavaScript syntax validation passed. CI is configured for Linux/Windows but remote
 CI has not been triggered here.
 
@@ -33,7 +35,9 @@ CI has not been triggered here.
 No browser surface was available. JSDOM tests behavior/coordinates but does not
 render layout or native focus. In a browser:
 
-1. Check desktop/mobile widths, horizontal scrolling, labels, shared timeline ticks.
+1. Check larger text at desktop/mobile widths, horizontal scrolling, the combined
+   Map label, shared timeline ticks, and enlarged DAG nodes. Check wrapped policy
+   and preset values, two columns above 760px, and narrow/short-viewport dialogs.
 2. Run maximum Map/D&C inputs with P=N−1. Inspect trailing idle time, arrows,
    split/base/combine labels, and processor rows.
 3. Check keyboard task selection, native dialog focus/Escape, and form navigation.

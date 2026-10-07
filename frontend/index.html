@@ -19,7 +19,7 @@
   </header>
 
   <main>
-    <div class="page-heading"><div><p class="eyebrow">THE PARALLEL SCHEDULING LAB</p><h1>Same work.<br>Different possibilities.</h1><p class="intro">Explore how computation structure, processors, and scheduling choices shape parallel performance.</p></div><div class="model-note"><span class="status-dot"></span> THE CORE MODEL<p>Identical processors. Fixed durations.<br>No preemption or overhead.</p><span>Simulated time units · no real waiting</span></div></div>
+    <div class="page-heading"><div><p class="eyebrow">THE PARALLEL SCHEDULING LAB</p><h1>Same work.<br>Different possibilities.</h1><p class="intro">Explore how computation structure, processors, and scheduling choices shape parallel performance.</p></div><div class="model-note"><div class="model-note-title"><span class="status-dot"></span> THE CORE MODEL</div><ul class="model-conditions"><li>Identical processors.</li><li>Fixed durations.</li><li>No preemption or overhead.</li></ul><span>Simulated time units · no real waiting</span></div></div>
 
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     <div class="workspace">
@@ -29,7 +29,7 @@
           <fieldset class="form-selector"><legend>Computation structure</legend><label><input type="radio" name="form" value="map" checked><span>Map</span></label><label><input type="radio" name="form" value="dc"><span>Divide &amp; conquer</span></label></fieldset>
           <div id="map-inputs" class="input-section">
             <label for="durations">Task durations</label><textarea id="durations" rows="2" spellcheck="false" aria-describedby="duration-help">3, 3, 2, 2, 2</textarea><p id="duration-help" class="help">2–16 tasks · integer durations 1–20.<br>Separate values with commas or spaces.</p>
-            <label for="preset">Try a preset</label><select id="preset"><option value="nonuniform">Nonuniform · 3, 3, 2, 2, 2</option><option value="uniform">Uniform · 8 tasks × 3</option><option value="straggler">One long task · 1, 1, 1, 1, 12</option><option value="mixed">Mixed work · 2, 8, 3, 7, 4, 6</option><option value="custom">Custom durations</option></select>
+            <label for="preset">Try a preset</label><div class="select-field"><select id="preset"><option value="nonuniform">Nonuniform · 3, 3, 2, 2, 2</option><option value="uniform">Uniform · 8 tasks × 3</option><option value="straggler">One long task · 1, 1, 1, 1, 12</option><option value="mixed">Mixed work · 2, 8, 3, 7, 4, 6</option><option value="custom">Custom durations</option></select><span id="preset-value" class="select-value" aria-hidden="true">Nonuniform · 3, 3, 2, 2, 2</span></div>
           </div>
           <div id="dc-inputs" class="input-section" hidden>
             <div class="field-grid"><div><label for="n">Problem size n</label><input id="n" type="number" min="2" max="8" step="1" value="8"><p class="help">2–8</p></div><div><label for="k">Split ratio k</label><input id="k" type="number" min="2" max="8" step="1" value="2"><p class="help">2–8 · ratio 1:k−1</p></div></div>
@@ -37,11 +37,11 @@
             <div class="field-grid three"><div><label for="split-duration">Split cost</label><input id="split-duration" type="number" min="1" max="20" step="1" value="1"></div><div><label for="base-duration">Base cost</label><input id="base-duration" type="number" min="1" max="20" step="1" value="3"></div><div><label for="combine-duration">Combine cost</label><input id="combine-duration" type="number" min="1" max="20" step="1" value="1"></div></div><p class="help">Each cost is an integer from 1–20.</p>
           </div>
           <div class="input-section"><div class="field-grid"><div><label for="processors">Processors P</label><input id="processors" type="number" min="1" max="4" step="1" value="2"></div><div class="task-count"><span id="task-count">05</span><span>computation tasks</span></div></div><p id="processor-help" class="help">Valid range: 1–4 processors (P &lt; N).</p>
-            <label for="policy">Scheduling policy</label><select id="policy"><option value="fixed">Fixed order</option><option value="longest" selected>Longest task first</option><option value="critical">Critical path first</option></select><p id="policy-help" class="help">Larger duration first. Ties use task ID.</p>
+            <label for="policy">Scheduling policy</label><div class="select-field"><select id="policy"><option value="fixed">Fixed order</option><option value="longest" selected>Longest Task First / Critical Path First</option></select><span id="policy-value" class="select-value" aria-hidden="true">Longest Task First / Critical Path First</span></div><p id="policy-help" class="help">Larger duration first. Ties use task ID. For Map, longest task and critical path priorities are equivalent.</p>
           </div>
           <p id="input-error" class="input-error" role="alert" hidden></p>
           <button id="run-button" class="button primary full" type="submit">Run simulation <span aria-hidden="true">↗</span></button>
-          <p class="configuration-note">Every run compares all three policies.</p>
+          <p id="configuration-note" class="configuration-note">Every run compares both policy options.</p>
         </form>
       </aside>
 
@@ -52,15 +52,22 @@
         <div id="result-content" hidden>
           <div id="metrics" class="metrics" aria-label="Performance metrics"></div>
           <section class="timeline-panel panel" aria-label="Processor timeline"><div class="panel-top"><div><h3>Processor timeline</h3><p class="help">Select a task to inspect its execution.</p></div><span id="timeline-duration" class="mono"></span></div><div id="legend" class="legend"></div><div class="timeline-scroll"><div id="timeline"></div></div><div id="task-detail" class="task-detail" aria-live="polite">Select a task on the timeline or dependency graph.</div></section>
-          <section class="comparison-panel panel"><div class="panel-top"><div><h3>Compare scheduling policies</h3><p class="help">Same computation. Same processors.</p></div><span class="tag">3 HEURISTICS</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Policy</th><th scope="col">Completion</th><th scope="col">Speedup</th><th scope="col">Utilization</th><th scope="col">Inspect</th></tr></thead><tbody id="comparison"></tbody></table></div><p id="comparison-note" class="help"></p></section>
+          <section class="comparison-panel panel"><div class="panel-top"><div><h3>Compare scheduling policies</h3><p class="help">Same computation. Same processors.</p></div><span id="comparison-count" class="tag">2 POLICY OPTIONS</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Policy</th><th scope="col">Completion</th><th scope="col">Speedup</th><th scope="col">Utilization</th><th scope="col">Inspect</th></tr></thead><tbody id="comparison"></tbody></table></div><p id="comparison-note" class="help"></p></section>
           <details id="dag-panel" class="dag-panel panel"><summary><span><span class="section-number">↳</span> Computation dependencies</span><span class="help">Supporting DAG view</span></summary><div class="dag-body"><p class="help">Arrows show prerequisites. Split → children → combine. Select a node for details.</p><div id="dag" class="dag-scroll"></div></div></details>
-          <div class="save-panel panel"><div><h3>Keep this experiment</h3><p id="save-help" class="help">Log in to save results and revisit them later.</p></div><form id="save-form"><label class="sr-only" for="experiment-name">Experiment name</label><input id="experiment-name" maxlength="80" placeholder="Give this experiment a name" required><button id="save-button" class="button secondary" type="submit">Save</button></form></div>
+          <div class="save-panel panel"><div><h3>Keep this experiment</h3><p id="save-help" class="help">Log in to save results and revisit them later.</p></div><form id="save-form"><label class="sr-only" for="experiment-name">Experiment name</label><input id="experiment-name" maxlength="80" placeholder="Experiment name" required><button id="save-button" class="button secondary" type="submit">Save</button></form></div>
         </div>
       </section>
     </div>
 
     <section class="history-section"><div class="results-top"><div class="section-heading"><span class="section-number">03</span><h2>Your experiments</h2></div><button id="refresh-history" class="text-button" hidden>Refresh ↻</button></div><div id="history" class="history-grid"><p class="help">Log in to build your private experiment collection.</p></div></section>
-    <details class="model-explainer"><summary>A quick guide to the numbers <span aria-hidden="true">+</span></summary><div class="explanation-grid"><p><strong>Work W</strong> is the sum of task durations. With one processor, completion time equals W.</p><p><strong>Span S</strong> is the longest dependency path. Even unlimited processors cannot finish faster than S.</p><p><strong>Average parallelism W/S</strong> describes the computation’s available parallelism.</p><p><strong>Speedup W/T<sub>P</sub></strong> compares a schedule to its serial baseline.</p><p><strong>Utilization W/(P × T<sub>P</sub>)</strong> is the fraction of processor time spent computing.</p><p><strong>Lower bound max(W/P, S)</strong> is a limit on completion time. A schedule may not attain it.</p></div></details>
+    <details class="model-explainer"><summary>A quick guide to the numbers <span aria-hidden="true">+</span></summary><div class="explanation-grid">
+      <p><strong>Work W</strong> is the sum of all task durations. With one processor, completion time equals W.</p>
+      <p><strong>Span S</strong> is the sum of task durations along the longest dependency path. Even unlimited processors cannot finish faster than S.</p>
+      <p><strong>Average parallelism W/S</strong> describes the computation’s inherent parallelism, rather than the parallelism achieved by a particular schedule.</p>
+      <p><strong>Speedup W/T<sub>P</sub></strong> is the ratio of single-processor completion time to the current schedule’s completion time. A speedup of 2 means the computation finishes in half the time.</p>
+      <p><strong>Utilization W/(P × T<sub>P</sub>)</strong> is the fraction of total available processor time spent computing.</p>
+      <p><strong>Lower bound max(W/P, S)</strong> is a theoretical lower bound on completion time with P processors. A schedule may not attain it.</p>
+    </div></details>
   </main>
   <footer><span>Parallel Scheduling Lab</span><span>A work–span playground · 15-210</span></footer>
 

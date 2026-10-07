@@ -2,7 +2,10 @@
 
 A static frontend and Flask API for exploring the work–span model with **Map** and
 **Divide-and-Conquer** computations. Configure a computation, simulate it,
-inspect an aligned processor timeline, and compare three scheduling heuristics.
+inspect an aligned processor timeline, and compare scheduling heuristics. Map
+shows **Fixed order** and **Longest Task First / Critical Path First** as two
+options because longest task and critical path priorities are equivalent for
+independent tasks. Divide-and-Conquer keeps all three policies separate.
 Guests can run simulations; accounts can privately save, load, rename, and
 delete experiments.
 
@@ -64,7 +67,7 @@ documents settings; the app does **not** automatically load `.env` files.
 
 1. Select Map or Divide & conquer and enter parameters. Map presets are included.
 2. Select a processor count with `1 ≤ P < N`, where N counts computation tasks.
-3. Run. All three policies are calculated for the same input.
+3. Run. Compare two policy options for Map or three policies for Divide & conquer.
 4. Use **View** in the comparison table to inspect a policy's schedule. Select
    a timeline block or DAG node for details. The supporting DAG is collapsed initially.
 5. Register or log in, name the experiment, and use **Save**. Running does
@@ -72,7 +75,7 @@ documents settings; the app does **not** automatically load `.env` files.
 6. Saved experiments appear below the lab with load, rename, and delete actions.
 
 The default `[3, 3, 2, 2, 2]` example on two processors finishes in **7** units
-under all three heuristics. Its lower bound is **6**, attainable by putting the
+under both displayed Map options. Its lower bound is **6**, attainable by putting the
 two 3-unit tasks on one processor and the three 2-unit tasks on the other.
 The app compares heuristics; it does not search for or claim an optimal schedule.
 
