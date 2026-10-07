@@ -383,8 +383,3 @@ The project therefore includes meaningful frontend–backend communication and f
 
 
 //Since map and D&C allowed only, we no dependency needed to be specified by the user
-
-// questions: 1 persistent file storage details  2 login and security
-
-
-//scan to be added???

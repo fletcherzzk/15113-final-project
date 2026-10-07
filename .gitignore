@@ -1,0 +1,11 @@
+.venv/
+.runtime/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+*.py[cod]
+.env
+storage/
+artifacts/
+.coverage
+node_modules/

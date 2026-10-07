@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f0">
+  <title>Parallel Scheduling Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Parallel Scheduling Lab home"><span class="brand-mark" aria-hidden="true">≋</span><span>Parallel <strong>Lab</strong></span></a>
+    <span class="header-label">WORK · SPAN · SCHEDULING</span>
+    <div class="account-controls"><span id="account-label">Guest session</span><button id="account-button" class="button small secondary">Log in / Register</button><button id="logout-button" class="button small secondary" hidden>Log out</button></div>
+  </header>
+
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">THE PARALLEL SCHEDULING LAB</p><h1>Same work.<br>Different possibilities.</h1><p class="intro">Explore how computation structure, processors, and scheduling choices shape parallel performance.</p></div><div class="model-note"><span class="status-dot"></span> THE CORE MODEL<p>Identical processors. Fixed durations.<br>No preemption or overhead.</p><span>Simulated time units · no real waiting</span></div></div>
+
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div class="workspace">
+      <aside class="configuration panel">
+        <div class="section-heading"><span class="section-number">01</span><h2>Build an experiment</h2></div>
+        <form id="experiment-form">
+          <fieldset class="form-selector"><legend>Computation structure</legend><label><input type="radio" name="form" value="map" checked><span>Map</span></label><label><input type="radio" name="form" value="dc"><span>Divide &amp; conquer</span></label></fieldset>
+          <div id="map-inputs" class="input-section">
+            <label for="durations">Task durations</label><textarea id="durations" rows="2" spellcheck="false" aria-describedby="duration-help">3, 3, 2, 2, 2</textarea><p id="duration-help" class="help">2–16 tasks · integer durations 1–20.<br>Separate values with commas or spaces.</p>
+            <label for="preset">Try a preset</label><select id="preset"><option value="nonuniform">Nonuniform · 3, 3, 2, 2, 2</option><option value="uniform">Uniform · 8 tasks × 3</option><option value="straggler">One long task · 1, 1, 1, 1, 12</option><option value="mixed">Mixed work · 2, 8, 3, 7, 4, 6</option><option value="custom">Custom durations</option></select>
+          </div>
+          <div id="dc-inputs" class="input-section" hidden>
+            <div class="field-grid"><div><label for="n">Problem size n</label><input id="n" type="number" min="2" max="8" step="1" value="8"><p class="help">2–8</p></div><div><label for="k">Split ratio k</label><input id="k" type="number" min="2" max="8" step="1" value="2"><p class="help">2–8 · ratio 1:k−1</p></div></div>
+            <label for="b">Base-case threshold b</label><input id="b" type="number" min="1" max="7" step="1" value="1"><p id="b-help" class="help">1–7 · a call stops when its size ≤ b</p>
+            <div class="field-grid three"><div><label for="split-duration">Split cost</label><input id="split-duration" type="number" min="1" max="20" step="1" value="1"></div><div><label for="base-duration">Base cost</label><input id="base-duration" type="number" min="1" max="20" step="1" value="3"></div><div><label for="combine-duration">Combine cost</label><input id="combine-duration" type="number" min="1" max="20" step="1" value="1"></div></div><p class="help">Each cost is an integer from 1–20.</p>
+          </div>
+          <div class="input-section"><div class="field-grid"><div><label for="processors">Processors P</label><input id="processors" type="number" min="1" max="4" step="1" value="2"></div><div class="task-count"><span id="task-count">05</span><span>computation tasks</span></div></div><p id="processor-help" class="help">Valid range: 1–4 processors (P &lt; N).</p>
+            <label for="policy">Scheduling policy</label><select id="policy"><option value="fixed">Fixed order</option><option value="longest" selected>Longest task first</option><option value="critical">Critical path first</option></select><p id="policy-help" class="help">Larger duration first. Ties use task ID.</p>
+          </div>
+          <p id="input-error" class="input-error" role="alert" hidden></p>
+          <button id="run-button" class="button primary full" type="submit">Run simulation <span aria-hidden="true">↗</span></button>
+          <p class="configuration-note">Every run compares all three policies.</p>
+        </form>
+      </aside>
+
+      <section class="results" aria-label="Simulation results">
+        <div class="results-top"><div class="section-heading"><span class="section-number">02</span><h2>The schedule</h2></div><span id="result-label" class="result-label">Ready to explore</span></div>
+        <p id="stale-note" class="stale-note" hidden>Inputs changed. Run again to update these results.</p>
+        <div id="empty-state" class="empty-state panel"><span class="empty-symbol" aria-hidden="true">▥</span><h3>See the work unfold.</h3><p>Run an experiment to inspect assignments,<br>idle time, and the limits of parallelism.</p></div>
+        <div id="result-content" hidden>
+          <div id="metrics" class="metrics" aria-label="Performance metrics"></div>
+          <section class="timeline-panel panel" aria-label="Processor timeline"><div class="panel-top"><div><h3>Processor timeline</h3><p class="help">Select a task to inspect its execution.</p></div><span id="timeline-duration" class="mono"></span></div><div id="legend" class="legend"></div><div class="timeline-scroll"><div id="timeline"></div></div><div id="task-detail" class="task-detail" aria-live="polite">Select a task on the timeline or dependency graph.</div></section>
+          <section class="comparison-panel panel"><div class="panel-top"><div><h3>Compare scheduling policies</h3><p class="help">Same computation. Same processors.</p></div><span class="tag">3 HEURISTICS</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Policy</th><th scope="col">Completion</th><th scope="col">Speedup</th><th scope="col">Utilization</th><th scope="col">Inspect</th></tr></thead><tbody id="comparison"></tbody></table></div><p id="comparison-note" class="help"></p></section>
+          <details id="dag-panel" class="dag-panel panel"><summary><span><span class="section-number">↳</span> Computation dependencies</span><span class="help">Supporting DAG view</span></summary><div class="dag-body"><p class="help">Arrows show prerequisites. Split → children → combine. Select a node for details.</p><div id="dag" class="dag-scroll"></div></div></details>
+          <div class="save-panel panel"><div><h3>Keep this experiment</h3><p id="save-help" class="help">Log in to save results and revisit them later.</p></div><form id="save-form"><label class="sr-only" for="experiment-name">Experiment name</label><input id="experiment-name" maxlength="80" placeholder="Give this experiment a name" required><button id="save-button" class="button secondary" type="submit">Save</button></form></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="history-section"><div class="results-top"><div class="section-heading"><span class="section-number">03</span><h2>Your experiments</h2></div><button id="refresh-history" class="text-button" hidden>Refresh ↻</button></div><div id="history" class="history-grid"><p class="help">Log in to build your private experiment collection.</p></div></section>
+    <details class="model-explainer"><summary>A quick guide to the numbers <span aria-hidden="true">+</span></summary><div class="explanation-grid"><p><strong>Work W</strong> is the sum of task durations. With one processor, completion time equals W.</p><p><strong>Span S</strong> is the longest dependency path. Even unlimited processors cannot finish faster than S.</p><p><strong>Average parallelism W/S</strong> describes the computation’s available parallelism.</p><p><strong>Speedup W/T<sub>P</sub></strong> compares a schedule to its serial baseline.</p><p><strong>Utilization W/(P × T<sub>P</sub>)</strong> is the fraction of processor time spent computing.</p><p><strong>Lower bound max(W/P, S)</strong> is a limit on completion time. A schedule may not attain it.</p></div></details>
+  </main>
+  <footer><span>Parallel Scheduling Lab</span><span>A work–span playground · 15-210</span></footer>
+
+  <dialog id="auth-dialog"><form id="auth-form"><div class="dialog-header"><h2 id="auth-title">Welcome back</h2><button type="button" class="close-button" data-close="auth-dialog" aria-label="Close account dialog">×</button></div><div class="auth-tabs"><button type="button" id="login-tab" class="active">Log in</button><button type="button" id="register-tab">Register</button></div><label for="username">Username</label><input id="username" autocomplete="username" pattern="[A-Za-z0-9_]{3,30}" minlength="3" maxlength="30" required><p class="help">3–30 letters, numbers, or underscores.</p><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required><p class="help">8–128 characters.</p><p id="auth-error" class="input-error" role="alert" hidden></p><button id="auth-submit" class="button primary full" type="submit">Log in</button><p class="help">Guests can run every experiment. An account keeps saved experiments private.</p></form></dialog>
+  <dialog id="edit-dialog"><form id="edit-form"><div class="dialog-header"><h2 id="edit-title">Rename experiment</h2><button type="button" class="close-button" data-close="edit-dialog" aria-label="Close experiment dialog">×</button></div><p id="edit-description"></p><label id="edit-name-label" for="edit-name">Experiment name</label><input id="edit-name" maxlength="80"><p id="edit-error" class="input-error" role="alert" hidden></p><div class="dialog-actions"><button class="button secondary" type="button" data-close="edit-dialog">Cancel</button><button id="edit-submit" class="button primary" type="submit">Rename</button></div></form></dialog>
+</body>
+</html>
