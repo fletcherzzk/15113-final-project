@@ -138,6 +138,6 @@ a shared limiter backend. Password failure messages do not identify whether an
 account exists.
 
 Render uses `/var/data/records.jsonl` on a persistent disk. Gunicorn is the
-production entry point; `python app.py` is local development. The Blueprint needs
+production entry point; `python backend/app.py` from the repository root is local development. The Blueprint needs
 provisioning in a Render account. Actual remote restart/redeployment persistence
 has not yet been verified.

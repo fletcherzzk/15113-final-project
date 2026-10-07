@@ -3,8 +3,8 @@ services:
     name: parallel-scheduling-lab
     runtime: python
     plan: starter
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --workers 1 --threads 4 --bind 0.0.0.0:$PORT wsgi:app
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend --workers 1 --threads 4 --bind 0.0.0.0:$PORT wsgi:app
     healthCheckPath: /api/health
     disk:
       name: lab-records

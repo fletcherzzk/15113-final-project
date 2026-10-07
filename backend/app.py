@@ -1,4 +1,4 @@
-"""Same-origin Flask frontend/API. Run locally with `python app.py`."""
+"""Same-origin Flask frontend/API. Run with `python backend/app.py` from the repository root."""
 
 from datetime import timedelta
 from functools import wraps
@@ -18,7 +18,9 @@ from lab.storage import ConflictError, EventStore, NotFoundError, StorageError, 
 
 
 def create_app(test_config=None):
-    app = Flask(__name__)
+    frontend = Path(__file__).resolve().parent.parent / "frontend"
+    app = Flask(__name__, template_folder=str(frontend / "templates"),
+                static_folder=str(frontend / "static"), static_url_path="/static")
     production = os.environ.get("APP_ENV") == "production"
     secret = os.environ.get("SECRET_KEY")
     storage = os.environ.get("STORAGE_PATH")

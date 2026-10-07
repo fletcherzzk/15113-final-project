@@ -16,20 +16,20 @@ Use Python 3.11 or later. From the repository root:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe app.py
+.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+.venv\Scripts\python.exe backend/app.py
 ```
 
 On macOS/Linux:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python app.py
+.venv/bin/python -m pip install -r backend/requirements.txt
+.venv/bin/python backend/app.py
 ```
 
 Open **http://127.0.0.1:5000**. No frontend build step, database, or Node runtime
-is required to run the application. Local records go to `storage/records.jsonl`,
+is required to run the application. Local records go to `backend/storage/records.jsonl`,
 which is excluded from Git. The app serves its frontend and API on one origin.
 
 The implementation machine's Python executable and standard library were in
@@ -40,11 +40,11 @@ Set a stable `SECRET_KEY` to preserve login cookies across local server restarts
 
 ```powershell
 $env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-.venv\Scripts\python.exe app.py
+.venv\Scripts\python.exe backend/app.py
 ```
 
 The development fallback creates a random key at startup, so old sessions expire
-on restart while saved accounts and experiments remain on disk. `.env.example`
+on restart while saved accounts and experiments remain on disk. `backend/.env.example`
 documents settings; the app does **not** automatically load `.env` files.
 
 ## Using the lab
@@ -66,25 +66,25 @@ The app compares heuristics; it does not search for or claim an optimal schedule
 ## Verify
 
 ```powershell
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.venv\Scripts\python.exe -m pytest -q
+.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.venv\Scripts\python.exe -m pytest -c backend/pytest.ini -q
 ```
 
 Frontend integration tests additionally require Node 22.13+:
 
 ```sh
-npm ci
-npm test
+npm --prefix frontend ci
+npm --prefix frontend test
 ```
 
 These use JSDOM to execute the actual frontend JavaScript against an isolated
 Flask process, with an independent cookie session per fixture. Test accounts and
-logs live under ignored `artifacts/` directories. The server starts/stops
+logs live under ignored `other/artifacts/` directories. The server starts/stops
 automatically; a separate running app is unnecessary. Set `PYTHON_EXECUTABLE`
 if Python is outside `.venv/` and `PATH`.
 
 Verification: **81 backend tests and 5 frontend integration tests passed**, plus
-`node --check static/app.js`. JSDOM does not verify browser layout, native dialog
+`node --check frontend/static/app.js`. JSDOM does not verify browser layout, native dialog
 focus, or screenshot quality. No browser surface was available during
 implementation, so browser visual QA remains manual. See
 [the acceptance checklist](docs/VERIFICATION.md).
@@ -96,7 +96,8 @@ production settings, and a persistent disk mounted at `/var/data`. Deployment
 has **not** been performed by this implementation.
 
 1. Push this repository to your GitHub account.
-2. In Render, create a **Blueprint** from the repository and review the service
+2. In Render, create a **Blueprint** from the repository using `other/render.yaml`
+   as its Blueprint path and review the service
    and disk before provisioning. The Blueprint selects a paid `starter` service
    because persistent disks require a paid service.
 3. Keep the generated `SECRET_KEY` stable. `APP_ENV=production` and
@@ -116,17 +117,49 @@ Official references: [Flask deployment](https://render.com/docs/deploy-flask),
 
 ## Project guide
 
+All application files are grouped into three folders. Commands above run from
+the repository root (the parent of these folders).
+
+```text
+frontend/                HTML, CSS, JavaScript, and frontend tests
+  templates/
+  static/
+  tests/
+  package.json
+  package-lock.json
+backend/                 Flask, simulation, persistence, and backend tests
+  app.py
+  wsgi.py
+  lab/
+  tests/
+  requirements.txt
+  requirements-dev.txt
+  pytest.ini
+  .env.example
+  storage/               ignored local account/experiment data
+other/                   Specification, documentation, deployment, test artifacts
+  README.md
+  Parallel_Scheduling_Lab_Spec.md
+  docs/
+  render.yaml
+  artifacts/             ignored test outputs
+```
+
+Git configuration and `.github/workflows/` remain at the repository root, where
+Git and GitHub require them. The ignored local Python environment/runtime also
+remain there. Frontend Node dependencies are under `frontend/node_modules/`.
+
 | Component | Responsibility |
 | --- | --- |
-| `lab/simulation.py` | Validation, DAG generation, ranks, scheduling, metrics |
-| `lab/auth.py` | Credential constraints and authentication rate limiting |
-| `lab/storage.py` | Locked append-only JSONL records, validation, replay, ownership |
-| `app.py` | App factory, sessions, CSRF, API routes, security headers |
-| `wsgi.py` | Gunicorn entry point |
-| `templates/index.html` | Inputs, results, accounts, and history |
-| `static/app.js` | Fetch integration and interactive SVG timelines/DAGs |
-| `static/styles.css` | Responsive visual layout |
-| `tests/` | Backend and frontend acceptance tests |
+| `backend/lab/simulation.py` | Validation, DAG generation, ranks, scheduling, metrics |
+| `backend/lab/auth.py` | Credential constraints and authentication rate limiting |
+| `backend/lab/storage.py` | Locked append-only JSONL records, validation, replay, ownership |
+| `backend/app.py` | App factory, sessions, CSRF, API routes, security headers |
+| `backend/wsgi.py` | Gunicorn entry point |
+| `frontend/templates/index.html` | Inputs, results, accounts, and history |
+| `frontend/static/app.js` | Fetch integration and interactive SVG timelines/DAGs |
+| `frontend/static/styles.css` | Responsive visual layout |
+| `backend/tests/`, `frontend/tests/` | Backend and frontend acceptance tests |
 
 See [design and storage decisions](docs/DESIGN.md), [API documentation](docs/API.md),
 and [AI assistance and study notes](docs/AI_ASSISTANCE.md).

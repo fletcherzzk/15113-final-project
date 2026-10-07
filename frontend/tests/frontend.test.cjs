@@ -8,7 +8,7 @@ const net = require("node:net");
 const { spawn } = require("node:child_process");
 const { JSDOM } = require("jsdom");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "../..");
 let base, server, serverLog = "";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -27,12 +27,12 @@ before(async () => {
   const port = probe.address().port;
   await new Promise((resolve) => probe.close(resolve));
   base = `http://127.0.0.1:${port}`;
-  fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
-  const directory = fs.mkdtempSync(path.join(root, "artifacts", "ui-"));
+  fs.mkdirSync(path.join(root, "other", "artifacts"), { recursive: true });
+  const directory = fs.mkdtempSync(path.join(root, "other", "artifacts", "ui-"));
   const venv = path.join(root, ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
   const python = process.env.PYTHON_EXECUTABLE || (fs.existsSync(venv) ? venv : "python");
   server = spawn(python, ["-c", `from app import create_app; create_app().run(host='127.0.0.1', port=${port})`], {
-    cwd: root, windowsHide: true,
+    cwd: path.join(root, "backend"), windowsHide: true,
     env: { ...process.env, APP_ENV: "development", SECRET_KEY: "isolated-frontend-test-secret", STORAGE_PATH: path.join(directory, "records.jsonl"), PYTHONDONTWRITEBYTECODE: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -63,7 +63,7 @@ async function openPage() {
   window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   window.HTMLElement.prototype.scrollIntoView = function () {};
-  window.eval(fs.readFileSync(path.join(root, "static", "app.js"), "utf8"));
+  window.eval(fs.readFileSync(path.join(root, "frontend", "static", "app.js"), "utf8"));
   const get = (id) => window.document.getElementById(id);
   await waitFor(() => !get("result-content").hidden && !get("run-button").disabled, "initial simulation");
   return { dom, window, get };
