@@ -1,7 +1,7 @@
 # Parallel Scheduling Lab Specification
 
-Version: 1.0 — Planning specification  
-Date: October 4, 2026
+Version: 1.1 — Planning specification  
+Date: October 6, 2026
 
 ## 1. Purpose and Scope
 
@@ -9,7 +9,7 @@ Parallel Scheduling Lab is a web application for exploring how computation struc
 
 **The application shall accept exactly two input forms: Map or Divide-and-Conquer (D&C).** Unrestricted user-defined DAGs are outside the core scope. The backend shall generate a computation DAG from the selected input form and its parameters.
 
-Users shall be able to run simulations, inspect results, compare scheduling policies, and save experiments under their accounts. Core functionality includes frontend–backend communication, a database, and interactive visualization.
+Users shall be able to run simulations, inspect results, compare scheduling policies, and save experiments under their accounts. Core functionality includes frontend–backend communication, file-based storage, and interactive visualization.
 
 The TA has confirmed that AI may write all code. The student shall understand the important implementation details, verify behavior, and document design decisions and AI-assisted development.
 
@@ -149,11 +149,13 @@ These are heuristic policies and shall not be described as universally optimal. 
 
 The application shall display:
 
-- The generated computation DAG.
-- A timeline with one row per processor.
+- The generated computation DAG as a collapsible supporting view of task dependencies.
+- A processor timeline as the primary result visualization, with one row per processor.
 - Task execution intervals and idle intervals.
 - Work, span, completion time, speedup, and utilization.
 - A comparison of policy results for identical inputs and processor counts.
+
+All processor rows shall share the same aligned time axis so that concurrent execution and idle intervals can be compared directly. Collapsing the supporting DAG view shall leave the primary processor timeline available.
 
 Selecting a task shall reveal its type, duration, dependencies, processor assignment, and start/end times. D&C task types shall be distinguishable.
 
@@ -181,14 +183,16 @@ Proposed guest behavior: guests may run simulations, but saving requires login.
 
 Users shall be able to save, list, load, rename, and delete their experiments. Loading shall restore the saved configuration and results. Running and saving shall be separate operations.
 
-### 9.1 Proposed Data Model
+### 9.1 File-Based Storage and Record Model
 
-| Table | Fields |
+| Record type | Fields |
 |---|---|
 | users | User ID, unique username, password hash, creation time |
 | experiments | Experiment ID, owner ID, name, input form, parameters, processor count, policy, results, simulator version, creation time |
 
-Parameters, DAGs, and timeline results may be stored as JSON where supported by the chosen database.
+Following the TA's recommendation, the application shall use file-based storage instead of a database. The Flask backend hosted on Render shall append new records to a storage file and read the accumulated records when retrieving saved data. Parameters, DAGs, and timeline results shall be serialized as JSON in the file.
+
+Renames and deletions shall be recorded as appended updates or deletion markers. Retrieval shall apply these records in order to reconstruct the current saved data, excluding deleted experiments. File reads and appends shall be coordinated to prevent partial records or conflicting writes.
 
 Temporary processor state shall exist only during simulation; it does not require persistent storage.
 
@@ -199,13 +203,13 @@ Temporary processor state shall exist only during simulation; it does not requir
 - Maintain login identity through a session.
 - Derive the user identity from the authenticated session.
 - Verify ownership for every experiment read, update, or deletion.
-- Use parameterized database queries or an ORM.
+- Validate stored records and handle file reads and appends through the backend persistence component.
 - Include appropriate HTTPS, cookie configuration, CSRF protection, and login rate limiting for deployment.
-- Keep application secrets and database credentials in environment variables.
+- Keep application secrets in environment variables.
 
 Email verification, password recovery, and third-party login are outside the initial scope.
 
-The database technology and persistent hosting arrangement remain pending TA consultation. User and experiment data shall survive application restarts and redeployment.
+The Flask backend shall be hosted on Render. The storage file shall reside on persistent storage so user and experiment data survive application restarts and redeployment. The persistent storage arrangement and file format details remain to be finalized.
 
 ## 10. Technology and Architecture
 
@@ -213,7 +217,8 @@ The stack shall be:
 
 - Backend: Python and Flask.
 - Frontend: HTML, CSS, and JavaScript.
-- Database: to be determined.
+- Storage: file-based storage, following the TA's recommendation.
+- Hosting: Render for the Flask backend.
 
 Recommended deployment: Flask serves both the frontend files and API under one origin.
 
@@ -244,7 +249,10 @@ The implementation shall verify that:
 - Identical configurations produce identical results.
 - Invalid inputs and excessive graph sizes are rejected.
 - Users cannot access or modify other users' experiments.
-- Saved records persist across server restarts.
+- All processor rows use the same aligned time axis.
+- The processor timeline is the primary result visualization, and the supporting DAG view can be collapsed.
+- New storage records are appended to a file, and retrieval reads accumulated records to restore current saved data.
+- Saved records persist across server restarts and redeployment.
 
 Tests shall include small manually checked cases and a nonuniform map example with durations [3, 3, 2, 2, 2] on two processors. Longest-task and critical-path policies produce makespan 7, while an optimal arrangement has makespan 6.
 
@@ -252,10 +260,10 @@ Tests shall include small manually checked cases and a nonuniform map example wi
 
 Recommended order:
 
-1. Finalize remaining input limits and database/deployment decisions.
+1. Finalize remaining input limits and persistent file storage/deployment details.
 2. Implement and verify DAG generation and the simulator.
 3. Connect the simulation API.
-4. Build inputs, DAG visualization, timelines, and metrics.
+4. Build inputs, the primary processor timeline with a shared time axis, the collapsible supporting DAG view, and metrics.
 5. Add authentication, persistence, and experiment history.
 6. Deploy, verify, and complete documentation.
 7. Implement optional add-ons only after core acceptance criteria pass.
@@ -313,7 +321,7 @@ An extension may allow split, combine, and base-case durations to depend on subp
 
 This section intentionally repeats the integration plan for separate review.
 
-**The application accepts exactly two input forms: Map or Divide-and-Conquer.** The frontend uses HTML/CSS/JavaScript, and the backend uses Python/Flask. Database selection is pending TA consultation. The recommended arrangement is to serve the frontend and API from the same origin.
+**The application accepts exactly two input forms: Map or Divide-and-Conquer.** The frontend uses HTML/CSS/JavaScript, and the backend uses Python/Flask. Following the TA's recommendation, storage shall be file-based, and the Flask backend shall be hosted on Render. The recommended arrangement is to serve the frontend and API from the same origin.
 
 ### 14.1 Simulation Request Flow
 
@@ -328,40 +336,40 @@ This section intentionally repeats the integration plan for separate review.
 
 The backend performs actual graph generation, simulation, and validation. The frontend provides parameter entry and interactive visualization.
 
-### 14.2 Authentication and Database Flow
+### 14.2 Authentication and File-Based Storage Flow
 
 1. The user registers or logs in through the frontend.
 2. The backend hashes or verifies the password and establishes the login session.
-3. When the user selects Save, the backend associates the experiment with the authenticated user and writes it to the database.
+3. When the user selects Save, the backend associates the experiment with the authenticated user and appends a new record to the storage file.
 4. The frontend requests the user's experiment history.
-5. The backend checks authentication and ownership before returning or modifying records.
+5. The backend reads the accumulated file records, reconstructs current saved data, and checks authentication and ownership before returning records or appending updates or deletion markers.
 6. The frontend restores saved inputs and results, and supports rerunning, renaming, and deleting experiments.
 
 
 Experiment inputs: 
 The frontend: collects the selected input form and its parameters. 
-The backend: validates them and generates the computation DAG. When the user saves an experiment, the database stores its input form and parameters.
+The backend: validates them and generates the computation DAG. When the user saves an experiment, the backend appends its input form and parameters to the storage file.
 
 
 Simulation results: 
 The backend: runs the scheduling algorithm and calculates performance metrics. 
-The frontend: visualizes the returned DAG, execution timeline, and metrics. Saved simulation results are stored in the database.
+The frontend: visualizes the returned DAG, execution timeline, and metrics. Saved simulation results are appended to the storage file.
 
 Registration and login: 
 The frontend:  provides registration and login forms. 
-The backend:  hashes passwords during registration, verifies them during login, and maintains login sessions. The database stores usernames and password hashes.
+The backend:  hashes passwords during registration, verifies them during login, and maintains login sessions. The storage file stores user records containing usernames and password hashes.
 
 Experiment history: 
-The frontend: lets users view, load, rename, and delete saved experiments. The backend: performs database operations and checks that each experiment belongs to the authenticated user. The database stores the association between each user and their experiments.
+The frontend: lets users view, load, rename, and delete saved experiments. The backend: reads accumulated file records and appends updates or deletion markers and checks that each experiment belongs to the authenticated user. The storage file stores the association between each user and their experiments.
 
-The project therefore includes meaningful frontend–backend communication and database use. Accounts make saved experiments available across visits, and backend ownership checks keep each user's records private.
+The project therefore includes meaningful frontend–backend communication and file-based persistence. Accounts make saved experiments available across visits, and backend ownership checks keep each user's records private.
 
 
 
 
 //Since map and reduce allowed only, we no dependency needed to be specified by the user
 
-// questions: 1 database  2 login and security
+// questions: 1 persistent file storage details  2 login and security
 
 
 //scan to be added???
