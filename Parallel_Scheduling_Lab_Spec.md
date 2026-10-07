@@ -1,6 +1,6 @@
 # Parallel Scheduling Lab Specification
 
-Version: 1.1 — Planning specification  
+Version: 1.2 — Planning specification  
 Date: October 6, 2026
 
 ## 1. Purpose and Scope
@@ -74,7 +74,22 @@ Both child sizes shall be positive, sum to m, and be strictly smaller than m. Wi
 
 k = 2 produces the most balanced split available for the integer size. Larger k values produce more unequal splits, subject to rounding at small sizes.
 
-Limits for n, k, b, stage durations, and total generated task count remain to be finalized. The backend shall enforce a finite graph-size limit.
+### 3.3 D&C Input Limits and Validation
+
+The application shall enforce the following limits for Divide-and-Conquer inputs:
+
+- **Initial problem size (n):** an integer from 2 to 8.
+- **Split parameter (k):** an integer from 2 to 8.
+- **Base-case threshold (b):** an integer satisfying 1 ≤ b < n.
+- **Split, base-case, and combine durations:** three independently configurable integers from 1 to 20 simulated time units. All tasks of the same type shall use the corresponding duration.
+- **Processor count (P):** an integer satisfying 1 ≤ P < N, where N is the total number of generated split, base-case, and combine tasks.
+- **Generated task limit:** at most 22 computation tasks. Display-only markers shall not count toward this limit.
+
+The maximum task count occurs when n = 8 and b = 1, producing 8 base-case tasks, 7 split tasks, and 7 combine tasks.
+
+The frontend shall display the valid input ranges and provide clear validation messages. The backend shall independently validate all parameters and enforce the generated task limit.
+
+These limits apply specifically to D&C inputs. Map inputs shall retain their maximum of 16 tasks.
 
 ## 4. Processor Count
 
@@ -260,7 +275,7 @@ Tests shall include small manually checked cases and a nonuniform map example wi
 
 Recommended order:
 
-1. Finalize remaining input limits and persistent file storage/deployment details.
+1. Finalize persistent file storage/deployment details.
 2. Implement and verify DAG generation and the simulator.
 3. Connect the simulation API.
 4. Build inputs, the primary processor timeline with a shared time axis, the collapsible supporting DAG view, and metrics.
@@ -367,7 +382,7 @@ The project therefore includes meaningful frontend–backend communication and f
 
 
 
-//Since map and reduce allowed only, we no dependency needed to be specified by the user
+//Since map and D&C allowed only, we no dependency needed to be specified by the user
 
 // questions: 1 persistent file storage details  2 login and security
 
