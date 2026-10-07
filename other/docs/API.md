@@ -1,12 +1,40 @@
 # API
 
-Frontend/API share an origin. Responses are JSON; errors have
+Flask is API-only on Render; the static frontend lives on GitHub Pages. Responses are JSON; errors have
 `{"error":"Human-readable message"}`. Bodies must be JSON objects and ≤32 KiB.
 
-Start with `GET /api/session` to establish a cookie session and receive
-`{"user":null,"csrf_token":"<token>"}`. Send session cookies and
-`X-CSRF-Token` for **every** POST/PATCH/DELETE. Account operations rotate tokens;
-use the new token from their response. API responses use `Cache-Control: no-store`.
+Start with `GET <API_BASE_URL>/api/session` to establish a signed header session.
+The JSON body is `{"user":null,"csrf_token":"<token>"}` and the response's
+`X-Session-Token` header contains the signed session. Send that value as
+`Authorization: Bearer <session-token>` on subsequent requests and retain the
+updated `X-Session-Token` response header. Send `X-CSRF-Token` for **every**
+POST/PATCH/DELETE. Login/register/logout rotate CSRF and signed session values.
+API responses use `Cache-Control: no-store`; no cookies are read or written.
+
+Browser requests must originate from an exact `FRONTEND_ORIGINS` entry. Successful
+preflight responses allow Authorization, Content-Type, and X-CSRF-Token and expose
+X-Session-Token/Retry-After. Fetch uses `credentials: "omit"`. Unknown origins receive
+403 without allowed-origin/session headers. CLI clients may omit Origin, but need
+the same session and CSRF credentials. API route paths below are relative to the
+configured Render origin; `/` and `/static/...` return JSON 404.
+
+Example browser bootstrap:
+
+```js
+const response = await fetch(`${apiBaseUrl}/api/session`, { credentials: "omit" });
+const sessionToken = response.headers.get("X-Session-Token");
+const { csrf_token } = await response.json();
+await fetch(`${apiBaseUrl}/api/simulate`, {
+  method: "POST",
+  credentials: "omit",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${sessionToken}`,
+    "X-CSRF-Token": csrf_token,
+  },
+  body: JSON.stringify(configuration),
+});
+```
 
 ## Accounts
 

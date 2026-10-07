@@ -5,11 +5,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const net = require("node:net");
+const http = require("node:http");
 const { spawn } = require("node:child_process");
 const { JSDOM } = require("jsdom");
 
 const root = path.resolve(__dirname, "../..");
-let base, server, serverLog = "";
+let base, frontendBase, staticServer, server, serverLog = "";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(predicate, message) {
@@ -27,13 +28,25 @@ before(async () => {
   const port = probe.address().port;
   await new Promise((resolve) => probe.close(resolve));
   base = `http://127.0.0.1:${port}`;
+  const publicFiles = { "": "index.html", "config.js": "config.js", "static/app.js": "static/app.js", "static/styles.css": "static/styles.css" };
+  staticServer = http.createServer((request, response) => {
+    const pathname = new URL(request.url, "http://localhost").pathname;
+    const prefix = "/15113-final-project/";
+    const file = pathname.startsWith(prefix) ? publicFiles[pathname.slice(prefix.length)] : undefined;
+    if (!file) { response.writeHead(404).end(); return; }
+    response.setHeader("Content-Type", file.endsWith(".html") ? "text/html; charset=utf-8" : file.endsWith(".css") ? "text/css" : "application/javascript");
+    response.end(file === "config.js" ? `window.LAB_CONFIG = ${JSON.stringify({ apiBaseUrl: base })};` : fs.readFileSync(path.join(root, "frontend", file)));
+  });
+  await new Promise((resolve) => staticServer.listen(0, "127.0.0.1", resolve));
+  const frontendOrigin = `http://127.0.0.1:${staticServer.address().port}`;
+  frontendBase = `${frontendOrigin}/15113-final-project/`;
   fs.mkdirSync(path.join(root, "other", "artifacts"), { recursive: true });
   const directory = fs.mkdtempSync(path.join(root, "other", "artifacts", "ui-"));
   const venv = path.join(root, ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
   const python = process.env.PYTHON_EXECUTABLE || (fs.existsSync(venv) ? venv : "python");
   server = spawn(python, ["-c", `from app import create_app; create_app().run(host='127.0.0.1', port=${port})`], {
     cwd: path.join(root, "backend"), windowsHide: true,
-    env: { ...process.env, APP_ENV: "development", SECRET_KEY: "isolated-frontend-test-secret", STORAGE_PATH: path.join(directory, "records.jsonl"), PYTHONDONTWRITEBYTECODE: "1" },
+    env: { ...process.env, APP_ENV: "development", SECRET_KEY: "isolated-frontend-test-secret", FRONTEND_ORIGINS: frontendOrigin, STORAGE_PATH: path.join(directory, "records.jsonl"), PYTHONDONTWRITEBYTECODE: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   server.on("error", (error) => { serverLog += error.message; });
@@ -44,29 +57,44 @@ before(async () => {
     try { return (await fetch(`${base}/api/health`)).ok; } catch { return false; }
   }, "test server startup");
 });
-after(() => { if (server) server.kill(); });
+after(async () => { if (server) server.kill(); if (staticServer) await new Promise((resolve) => staticServer.close(resolve)); });
 
-async function openPage() {
-  const html = await (await fetch(base)).text();
-  const dom = new JSDOM(html, { url: base, runScripts: "outside-only", pretendToBeVisual: true });
+async function openPage(savedSession) {
+  const html = await (await fetch(frontendBase)).text();
+  const dom = new JSDOM(html, { url: frontendBase, runScripts: "outside-only", pretendToBeVisual: true });
   const window = dom.window;
-  let cookie = "";
+  const requests = [];
+  if (savedSession) window.sessionStorage.setItem(`parallel-lab.session:${base}`, savedSession);
   window.fetch = async (url, init = {}) => {
-    const headers = { ...init.headers };
-    if (cookie) headers.Cookie = cookie;
-    const response = await fetch(new URL(url, base), { ...init, headers });
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) cookie = setCookie.split(";")[0];
+    assert.equal(new URL(url).origin, base, "API requests target the independently hosted backend");
+    assert.equal(init.credentials, "omit", "Login must not depend on third-party cookies");
+    const headers = { ...init.headers, Origin: window.location.origin };
+    assert.equal(headers.Cookie, undefined);
+    const custom = Object.keys(init.headers).filter((key) => ["authorization", "content-type", "x-csrf-token"].includes(key.toLowerCase()));
+    if (custom.length) {
+      const preflight = await fetch(url, { method: "OPTIONS", headers: {
+        Origin: window.location.origin, "Access-Control-Request-Method": init.method,
+        "Access-Control-Request-Headers": custom.join(", "),
+      } });
+      assert.equal(preflight.status, 204, "Browser CORS preflight succeeds");
+      assert.equal(preflight.headers.get("Access-Control-Allow-Origin"), window.location.origin);
+    }
+    const response = await fetch(url, { ...init, headers });
+    assert.equal(response.headers.get("Access-Control-Allow-Origin"), window.location.origin);
+    assert.match(response.headers.get("Access-Control-Expose-Headers"), /X-Session-Token/);
+    assert.equal(response.headers.get("set-cookie"), null);
+    requests.push({ url, ...init });
     return response;
   };
   // Native modal/focus/layout behavior is outside JSDOM's scope.
   window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   window.HTMLElement.prototype.scrollIntoView = function () {};
-  window.eval(fs.readFileSync(path.join(root, "frontend", "static", "app.js"), "utf8"));
+  window.eval(await (await fetch(new URL("config.js", frontendBase))).text());
+  window.eval(await (await fetch(new URL("static/app.js", frontendBase))).text());
   const get = (id) => window.document.getElementById(id);
   await waitFor(() => !get("result-content").hidden && !get("run-button").disabled, "initial simulation");
-  return { dom, window, get };
+  return { dom, window, get, requests };
 }
 function input(page, id, value) {
   page.get(id).value = String(value);
@@ -101,6 +129,9 @@ test("initial Map results, shared axis, task selection, and JSON key-order equal
     assert.match(page.get("task-detail").textContent, /0 → 3/);
     assert.equal(page.get("dag-panel").open, false);
     assert.equal(page.get("timeline").hidden, false);
+    assert.equal(page.window.document.querySelector(".brand").href, frontendBase);
+    assert.equal(new URL(page.window.document.querySelector("link[rel='stylesheet']").href).pathname, "/15113-final-project/static/styles.css");
+    assert.ok(page.requests.find((request) => request.method === "POST" && request.headers.Authorization && request.headers["X-CSRF-Token"]));
   } finally { page.dom.window.close(); }
 });
 
@@ -170,6 +201,14 @@ test("registration, private save/load/rename/delete, safe names, logout and logi
     await waitFor(() => page.get("history").querySelector(".history-card"), "save history");
     assert.equal(page.get("history").querySelector("h3").textContent, name);
     assert.equal(page.get("history").querySelectorAll("img").length, 0);
+    const storedToken = page.window.sessionStorage.getItem(`parallel-lab.session:${base}`);
+    assert.ok(storedToken);
+    const reloaded = await openPage(storedToken);
+    try {
+      await waitFor(() => reloaded.get("history").querySelector(".history-card"), "login and private history survive a frontend reload");
+      assert.equal(reloaded.get("account-label").textContent, username);
+      assert.equal(reloaded.get("history").querySelector("h3").textContent, name);
+    } finally { reloaded.dom.window.close(); }
     input(page, "durations", "1, 1, 1");
     page.get("history").querySelector("button").click();
     await waitFor(() => page.get("durations").value === "3, 3, 2, 2, 2", "saved input restoration");

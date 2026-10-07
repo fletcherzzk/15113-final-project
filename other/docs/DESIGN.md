@@ -117,19 +117,45 @@ Passwords are 8–128 characters, hashed/verified with Werkzeug scrypt
 (`32768:8:1`, random 16-character salt). A dummy hash is verified for missing
 accounts. Passwords are never stored as plaintext or returned.
 
-Flask's signed session stores the user ID, resolved through storage on private
+Flask's signed API session stores the user ID, resolved through storage on private
 routes. Body owner IDs are ignored. Every read, rename, and delete checks
 ownership; unknown and unowned experiments both return 404. Guests receive 401.
 All API mutations require a session-bound `X-CSRF-Token`. Registration, login,
 and logout clear the old session and rotate the token.
 
-Cookies are HttpOnly, SameSite=Lax, Secure in production, with a seven-day
-lifetime. Production requires HTTPS, a stable secret of at least 32 characters,
-and an absolute persistent storage path. ProxyFix trusts one Render proxy hop
-for client IP/scheme; do not reuse it behind an untrusted forwarding topology.
-Frontend/API share one origin; no permissive CORS policy is configured. A
-restrictive CSP, anti-framing and MIME-sniffing headers, uncached API responses,
-and a 32 KiB body limit are included.
+The static frontend is hosted on GitHub Pages; Render serves only `/api/` routes.
+Flask has no static/template directory or homepage route. `frontend/index.html`
+uses relative assets/home links to work under a Pages repository subpath. The
+Pages build receives public `API_BASE_URL`, generates `config.js`, restricts CSP
+to that API's origin, and copies only an explicit list of public assets.
+
+`HeaderSessionInterface` reuses Flask's itsdangerous timed session serializer,
+with a separate salt and SHA-256 signing, through `Authorization: Bearer` and the
+`X-Session-Token` response header. It creates no cookies. `sessionStorage` retains
+the session across reloads in the same tab; the key includes the API origin.
+Tokens are readable by frontend scripts, so they must be treated as credentials.
+Names remain text-only and the static frontend sets CSP. Passwords are never in
+session tokens/storage. Modified/expired tokens become anonymous sessions; closing
+the tab removes the locally retained credential. Seven-day expiry is renewed by
+successful session responses, as with a rolling Flask session. Logout clears
+the browser's identity and rotates the token; it does not revoke a previously
+copied signed token server-side (the previous cookie design had the same limit).
+
+This transport avoids third-party cookie restrictions across `github.io` and
+`onrender.com`. Fetch omits cookies; no permissive credentialed CORS is needed.
+Exact `FRONTEND_ORIGINS` are required in production. Requests from other origins
+are rejected before API work. Preflight checks include the methods of all Flask
+rules for a URL (GET and POST can be separate rules), plus an explicit request
+header list. Responses vary by Origin and expose the session/Retry-After headers.
+Late responses from an earlier session cannot overwrite a rotated login/logout
+token. CSRF headers remain mandatory for every mutation.
+
+Production requires HTTPS, a stable secret of at least 32 characters, and an
+absolute persistent storage path. ProxyFix trusts one Render proxy hop for client
+IP/scheme; do not reuse it behind an untrusted forwarding topology. API responses
+are uncached with restrictive CSP, anti-framing/MIME-sniffing headers, and a
+32 KiB request limit. Only the Pages build artifact is published; backend logs,
+secrets, and test artifacts remain outside it.
 
 Registration/login share limits of 20 attempts/IP and 10/username per 15 minutes.
 Counters are bounded, thread-safe, in-memory, and reset on restart. Use the
@@ -141,3 +167,10 @@ Render uses `/var/data/records.jsonl` on a persistent disk. Gunicorn is the
 production entry point; `python backend/app.py` from the repository root is local development. The Blueprint needs
 provisioning in a Render account. Actual remote restart/redeployment persistence
 has not yet been verified.
+
+The original planning spec recommends one origin. The user's subsequent request
+explicitly changes that arrangement to GitHub Pages plus an API-only Render
+backend. Simulation algorithms and file records are unchanged; old cookie sessions
+require logging in once with the new frontend. Reference behavior:
+[Flask session interface](https://flask.palletsprojects.com/en/stable/api/#flask.sessions.SessionInterface),
+[CORS and third-party cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS).

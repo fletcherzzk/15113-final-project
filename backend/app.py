@@ -1,4 +1,4 @@
-"""Same-origin Flask frontend/API. Run with `python backend/app.py` from the repository root."""
+"""API-only Flask service. Run with `python backend/app.py` from the repository root."""
 
 from datetime import timedelta
 from functools import wraps
@@ -6,21 +6,21 @@ import hmac
 import os
 from pathlib import Path
 import secrets
+from urllib.parse import urlsplit
 
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, jsonify, request, session
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from lab.auth import AuthLimiter, credentials
+from lab.sessions import HeaderSessionInterface
 from lab.simulation import StructuralError, ValidationError, run_experiment
 from lab.storage import ConflictError, EventStore, NotFoundError, StorageError, experiment_name
 
 
 def create_app(test_config=None):
-    frontend = Path(__file__).resolve().parent.parent / "frontend"
-    app = Flask(__name__, template_folder=str(frontend / "templates"),
-                static_folder=str(frontend / "static"), static_url_path="/static")
+    app = Flask(__name__, static_folder=None, template_folder=None)
     production = os.environ.get("APP_ENV") == "production"
     secret = os.environ.get("SECRET_KEY")
     storage = os.environ.get("STORAGE_PATH")
@@ -31,14 +31,29 @@ def create_app(test_config=None):
     app.config.update(
         SECRET_KEY=secret or secrets.token_hex(32),
         STORAGE_PATH=storage or str(Path(app.root_path) / "storage" / "records.jsonl"),
-        SESSION_COOKIE_HTTPONLY=True,
-        SESSION_COOKIE_SECURE=production,
-        SESSION_COOKIE_SAMESITE="Lax",
+        FRONTEND_ORIGINS=os.environ.get("FRONTEND_ORIGINS", "" if production else
+                                       "http://127.0.0.1:8000,http://localhost:8000"),
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
         MAX_CONTENT_LENGTH=32 * 1024,
     )
     if test_config:
         app.config.update(test_config)
+    raw_origins = app.config["FRONTEND_ORIGINS"]
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    if not origins:
+        raise RuntimeError("FRONTEND_ORIGINS must list the allowed frontend origins.")
+    for origin in origins:
+        parsed = urlsplit(origin)
+        if (parsed.scheme not in ("http", "https") or not parsed.hostname
+                or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment
+                or (production and parsed.scheme != "https")):
+            raise RuntimeError("FRONTEND_ORIGINS must contain exact origins without paths or trailing slashes; production requires HTTPS.")
+        try:
+            parsed.port
+        except ValueError as error:
+            raise RuntimeError("FRONTEND_ORIGINS contains an invalid port.") from error
+    app.config["FRONTEND_ORIGINS"] = frozenset(origins)
+    app.session_interface = HeaderSessionInterface()
     # Render terminates HTTPS at its single trusted edge proxy.
     if production:
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
@@ -79,9 +94,27 @@ def create_app(test_config=None):
 
     @app.before_request
     def protect_requests():
+        if not request.path.startswith("/api/"):
+            return jsonify(error="This service provides API endpoints only."), 404
         if production and not request.is_secure and request.path != "/api/health":
             return jsonify(error="HTTPS is required."), 400
-        if request.path.startswith("/api/") and request.method in ("POST", "PATCH", "DELETE"):
+        origin = request.headers.get("Origin")
+        if origin is not None and origin not in app.config["FRONTEND_ORIGINS"]:
+            return jsonify(error="This frontend origin is not allowed."), 403
+        if request.method == "OPTIONS":
+            if request.url_rule is None:
+                return jsonify(error="API endpoint not found."), 404
+            method = request.headers.get("Access-Control-Request-Method")
+            headers = {header.strip().lower() for header in request.headers.get(
+                "Access-Control-Request-Headers", "").split(",") if header.strip()}
+            # GET and POST may be separate Flask rules for the same URL.
+            allowed_methods = app.url_map.bind_to_environ(request.environ).allowed_methods(request.path)
+            if method and method not in allowed_methods:
+                return jsonify(error="That request method is not allowed."), 405
+            if not headers <= {"authorization", "content-type", "x-csrf-token"}:
+                return jsonify(error="That request header is not allowed."), 403
+            return "", 204
+        if request.method in ("POST", "PATCH", "DELETE"):
             expected, received = session.get("csrf_token"), request.headers.get("X-CSRF-Token")
             if not expected or not received or not hmac.compare_digest(expected.encode(), received.encode()):
                 return jsonify(error="Session expired. Refresh the page and try again."), 403
@@ -92,14 +125,21 @@ def create_app(test_config=None):
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; style-src 'self'; "
-            "img-src 'self' data:; connect-src 'self'; object-src 'none'; "
-            "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+            "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"
         )
         if production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         if request.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
+            response.vary.add("Origin")
+            origin = request.headers.get("Origin")
+            if origin in app.config["FRONTEND_ORIGINS"]:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Expose-Headers"] = "X-Session-Token, Retry-After"
+                if request.method == "OPTIONS":
+                    response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, POST, PATCH, DELETE, OPTIONS"
+                    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, X-CSRF-Token"
+                    response.headers["Access-Control-Max-Age"] = "600"
         return response
 
     @app.errorhandler(ValidationError)
@@ -126,13 +166,7 @@ def create_app(test_config=None):
 
     @app.errorhandler(HTTPException)
     def http_error(error):
-        if request.path.startswith("/api/"):
-            return jsonify(error=error.description), error.code
-        return error
-
-    @app.route("/")
-    def index():
-        return render_template("index.html")
+        return jsonify(error=error.description), error.code
 
     @app.get("/api/health")
     def health():

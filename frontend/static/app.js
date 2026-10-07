@@ -3,7 +3,7 @@
 const $ = (id) => document.getElementById(id);
 const policies = { fixed: "Fixed order", longest: "Longest task first", critical: "Critical path first" };
 const types = { map: "Map", split: "Split", base: "Base case", combine: "Combine" };
-const state = { csrf: null, user: null, experiment: null, selected: null, authMode: "login", editing: null, pending: false, saving: false };
+const state = { csrf: null, sessionToken: null, user: null, experiment: null, selected: null, authMode: "login", editing: null, pending: false, saving: false };
 const presets = {
   nonuniform: [3, 3, 2, 2, 2], uniform: Array(8).fill(3),
   straggler: [1, 1, 1, 1, 12], mixed: [2, 8, 3, 7, 4, 6],
@@ -30,16 +30,46 @@ function clearNotice() { $("notice").hidden = true; }
 function inputError(message) { $("input-error").textContent = message; $("input-error").hidden = !message; }
 function format(number, digits = 2) { return Number.isInteger(number) ? String(number) : number.toFixed(digits); }
 
+function apiOrigin() {
+  const configured = window.LAB_CONFIG?.apiBaseUrl;
+  if (!configured) throw new Error("This site is not connected to a simulation server yet.");
+  const url = new URL(configured);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== "/"
+      || (url.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(url.hostname))) {
+    throw new Error("The simulation server address is invalid. Contact the site administrator.");
+  }
+  return url.origin;
+}
+function sessionStorageKey() { return `parallel-lab.session:${apiOrigin()}`; }
+function rememberSessionToken(token) {
+  state.sessionToken = token || null;
+  try {
+    if (state.sessionToken) window.sessionStorage.setItem(sessionStorageKey(), state.sessionToken);
+    else window.sessionStorage.removeItem(sessionStorageKey());
+  } catch { /* Login remains usable in memory if browser storage is disabled. */ }
+}
+
 async function api(path, method = "GET", data) {
   if (method !== "GET" && !state.csrf) throw new Error("The server session is unavailable. Refresh the page and try again.");
   const headers = { Accept: "application/json" };
+  const requestToken = state.sessionToken;
+  if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
   if (method !== "GET") headers["X-CSRF-Token"] = state.csrf;
   if (data !== undefined) headers["Content-Type"] = "application/json";
   let response;
   try {
-    response = await fetch(`/api${path}`, { method, headers, credentials: "same-origin", body: data === undefined ? undefined : JSON.stringify(data) });
+    response = await fetch(`${apiOrigin()}/api${path}`, { method, headers, credentials: "omit", body: data === undefined ? undefined : JSON.stringify(data) });
   } catch { throw new Error("Cannot reach the server. Check your connection and try again."); }
+  // Late responses from an earlier session must not undo login/logout rotation.
+  const currentResponse = state.sessionToken === requestToken;
+  const updatedToken = response.headers.get("X-Session-Token");
+  if (currentResponse && updatedToken !== null) rememberSessionToken(updatedToken);
   const value = await response.json().catch(() => ({ error: "The server returned an unexpected response." }));
+  if (currentResponse && response.status === 401 && path.startsWith("/experiments")) {
+    const fresh = await api("/session");
+    state.user = fresh.user; state.csrf = fresh.csrf_token;
+    renderAccount(); await refreshHistory();
+  }
   if (!response.ok) throw new Error(value.error || "The request could not be completed.");
   return value;
 }
@@ -353,7 +383,11 @@ $("edit-form").addEventListener("submit", async (event) => {
 
 async function initialize() {
   refreshInputs();
-  try { const session = await api("/session"); state.csrf = session.csrf_token; state.user = session.user; renderAccount(); await run(); await refreshHistory(); }
+  try {
+    apiOrigin();
+    try { state.sessionToken = window.sessionStorage.getItem(sessionStorageKey()); } catch { state.sessionToken = null; }
+    const session = await api("/session"); state.csrf = session.csrf_token; state.user = session.user; renderAccount(); await run(); await refreshHistory();
+  }
   catch (error) { notice(error.message, true); }
 }
 initialize();

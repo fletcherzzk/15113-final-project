@@ -25,3 +25,6 @@ jobs:
       - run: npm --prefix frontend ci
       - run: npm --prefix frontend test
       - run: node --check frontend/static/app.js
+      - run: npm --prefix frontend run build
+        env:
+          API_BASE_URL: https://example-api.onrender.com

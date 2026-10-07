@@ -15,13 +15,16 @@
 | Append/replay/persistence | Earlier bytes retained; new app instance restores stored results |
 | Concurrent storage | Distinct store instances append concurrently; registration stays unique |
 | Corruption | Truncated/invalid records and modified schedules fail closed without overwrites |
-| Accounts/CSRF/production | Hash records, rotated tokens, rate limits, secure cookies, HTTPS enforcement |
+| Accounts/CSRF/production | Hash records, rotated signed header sessions/CSRF, rate limits, HTTPS enforcement |
+| Split hosting/CORS | Separate static/API servers, actual OPTIONS exchanges, exact-origin rejection, no cookies |
+| Session persistence and expiry | Reload retains login through sessionStorage; modified/expired signatures become anonymous |
+| Pages artifact | Public assets only, relative paths, generated HTTPS API configuration/CSP, invalid URL rejection |
 | Aligned primary timeline | Frontend test checks common SVG axis and identical row extents |
 | Collapsible supporting DAG | Nodes/joins render; collapsing leaves the timeline present |
 | UI history and validation | Register/save/load/rename/delete/login, stale state, invalid inputs |
 | Safe text/network errors | HTML-like names remain text; fetch failures release buttons |
 
-Verification: **81 Python tests and 5 Node/JSDOM integration tests passed**;
+Verification: **91 Python tests and 7 Node/JSDOM/frontend build tests passed**;
 JavaScript syntax validation passed. CI is configured for Linux/Windows but remote
 CI has not been triggered here.
 
@@ -37,16 +40,22 @@ render layout or native focus. In a browser:
 4. Register, reload, logout/login, and verify a second account's private history.
 5. Load, edit, rerun, compare policies, and save; verify the selected schedule is saved.
 
-## Render verification still needed
+## GitHub Pages and Render verification still needed
 
 The persistent-disk Blueprint is included; no Render service has been provisioned.
 After deploying from your account:
 
-1. Verify HTTPS, health, Secure cookies, stable secret, and `/var/data` disk mount.
+1. Verify the Pages workflow and repository `API_BASE_URL`, Render HTTPS/health,
+   exact `FRONTEND_ORIGINS`, stable secret, and `/var/data` disk mount.
 2. Register, save, and rename an experiment.
 3. Restart, log in, and load it; compare saved metrics/timeline/configuration.
 4. Redeploy and repeat the load check.
 5. Delete, restart, and ensure the experiment does not reappear.
+6. Reload the Pages site while signed in. Verify Authorization and CSRF headers,
+   successful preflights, and exposed X-Session-Token. Test with third-party cookies
+   disabled; no Set-Cookie or credentialed cookie requests should occur.
+7. Verify `<Render URL>/` and `/static/app.js` return 404 and only the public
+   frontend build assets appear in the Pages artifact.
 
 Local restart tests prove replay from the same file, but cannot prove the hosting
 account attached/retained its persistent disk correctly.

@@ -4,6 +4,11 @@ The spec permits AI-written code. Codex generated this implementation, tests,
 deployment configuration, and documentation. It read the spec, implemented DAGs
 and scheduling, added API/interface/accounts/storage, and ran verification.
 Official Render documentation informed the persistent-disk configuration.
+The user's later request changed hosting to a static GitHub Pages frontend plus
+an API-only Flask service. Codex implemented explicit API configuration, Pages
+artifact/workflow, exact-origin CORS, and signed header sessions, then verified
+them against separate static/API servers with cookies omitted. Official GitHub,
+Flask, and MDN documentation informed those changes.
 
 This does not establish that the student independently reviewed or understood
 the code. No student reflection, manual browser outcome, or remote deployment
@@ -20,6 +25,8 @@ lessons learned after using and deploying it.
 - Explain the makespan-7 heuristic schedule and a makespan-6 alternative partition.
 - Follow a run from `fetch` through validation/generation/scheduling to aligned SVG rows.
 - Follow hashing, session identity, CSRF rotation, and ownership checks.
+- Explain why cross-site cookie restrictions motivate header sessions, how the
+  frontend stores them, and why CORS must expose X-Session-Token.
 - Replay create/rename/delete events and explain transaction locks and `fsync`.
 - Explain the distinct roles of a persistent disk (records) and stable secret (sessions).
 

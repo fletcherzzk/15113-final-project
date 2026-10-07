@@ -4,13 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f5f0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="same-origin">
   <title>Parallel Scheduling Lab</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <link rel="stylesheet" href="./static/styles.css">
+  <script src="./config.js" defer></script>
+  <script src="./static/app.js" defer></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="Parallel Scheduling Lab home"><span class="brand-mark" aria-hidden="true">≋</span><span>Parallel <strong>Lab</strong></span></a>
+    <a class="brand" href="./" aria-label="Parallel Scheduling Lab home"><span class="brand-mark" aria-hidden="true">≋</span><span>Parallel <strong>Lab</strong></span></a>
     <span class="header-label">WORK · SPAN · SCHEDULING</span>
     <div class="account-controls"><span id="account-label">Guest session</span><button id="account-button" class="button small secondary">Log in / Register</button><button id="logout-button" class="button small secondary" hidden>Log out</button></div>
   </header>
