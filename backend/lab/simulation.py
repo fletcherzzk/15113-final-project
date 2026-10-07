@@ -1,14 +1,15 @@
 """Deterministic DAG generation and nonpreemptive discrete-event scheduling.
 
-Task IDs are numeric preorder IDs. A recursive call allocates its split,
-then the complete left and right subgraphs, then its combine task.
+Task IDs follow dependency levels, from left to right within each level.
+The original recursive order is retained for validating version 1.0.0 saves.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import heapq
 from typing import Any
 
-SIMULATOR_VERSION = "1.0.0"
+SIMULATOR_VERSION = "1.1.0"
+SUPPORTED_SIMULATOR_VERSIONS = ("1.0.0", SIMULATOR_VERSION)
 POLICIES = ("fixed", "longest", "critical")
 
 
@@ -49,7 +50,7 @@ def generate_map(durations):
             for i, d in enumerate(durations)]
 
 
-def generate_dc(n, k, b, split, base, combine):
+def _generate_dc_preorder(n, k, b, split, base, combine):
     integer(n, "Problem size n", 2, 8)
     integer(k, "Split parameter k", 2, 8)
     integer(b, "Base threshold b", 1, n - 1)
@@ -78,7 +79,23 @@ def generate_dc(n, k, b, split, base, combine):
     return tasks
 
 
-def parse_configuration(raw: Any):
+def generate_dc(n, k, b, split, base, combine):
+    tasks = _generate_dc_preorder(n, k, b, split, base, combine)
+    levels = {}
+    for task in tasks:
+        levels[task.id] = 1 + max((levels[dep] for dep in task.dependencies), default=-1)
+    # Recursive order already runs left to right within a dependency level,
+    # including combines in unbalanced trees. Stable sorting preserves that order.
+    ordered = sorted(tasks, key=lambda task: levels[task.id])
+    ids = {task.id: index for index, task in enumerate(ordered, 1)}
+    return [replace(task, id=ids[task.id],
+                    dependencies=tuple(ids[dep] for dep in task.dependencies))
+            for task in ordered]
+
+
+def parse_configuration(raw: Any, *, simulator_version=SIMULATOR_VERSION):
+    if simulator_version not in SUPPORTED_SIMULATOR_VERSIONS:
+        raise ValidationError("Unsupported simulator version.")
     if not isinstance(raw, dict):
         raise ValidationError("Configuration must be a JSON object.")
     form = raw.get("form")
@@ -92,7 +109,8 @@ def parse_configuration(raw: Any):
     elif form == "dc":
         keys = ("n", "k", "b", "split_duration", "base_duration", "combine_duration")
         parameters = {key: params.get(key) for key in keys}
-        tasks = generate_dc(*(parameters[key] for key in keys))
+        generator = _generate_dc_preorder if simulator_version == "1.0.0" else generate_dc
+        tasks = generator(*(parameters[key] for key in keys))
     else:
         raise ValidationError("Choose Map or Divide-and-Conquer.")
     processors = integer(raw.get("processors"), "Processor count P", 1, len(tasks) - 1)
@@ -191,10 +209,10 @@ def simulate(tasks, processors, policy):
                         "lower_bound": max(work / processors, span)}}
 
 
-def run_experiment(raw):
-    config, tasks = parse_configuration(raw)
+def run_experiment(raw, *, simulator_version=SIMULATOR_VERSION):
+    config, tasks = parse_configuration(raw, simulator_version=simulator_version)
     comparisons = {policy: simulate(tasks, config["processors"], policy) for policy in POLICIES}
     ranks = analyze_graph(tasks)
-    return {"configuration": config, "simulator_version": SIMULATOR_VERSION,
+    return {"configuration": config, "simulator_version": simulator_version,
             "dag": [{**task.to_dict(), "rank": ranks[task.id]} for task in tasks],
             "results": comparisons[config["policy"]], "comparisons": comparisons}

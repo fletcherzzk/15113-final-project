@@ -15,7 +15,9 @@ function refreshPolicyOptions(form, selected = $("policy").value) {
     select.dataset.form = form;
   }
   select.value = displayedPolicy(form, selected) || "longest";
-  $("policy-value").textContent = select.selectedOptions[0]?.textContent || "";
+  const label = select.selectedOptions[0]?.textContent || "";
+  const slash = label.indexOf("/");
+  $("policy-value").replaceChildren(...(slash < 0 ? [label] : [label.slice(0, slash), element("br"), label.slice(slash)]));
 }
 const types = { map: "Map", split: "Split", base: "Base case", combine: "Combine" };
 const state = { csrf: null, sessionToken: null, user: null, experiment: null, selected: null, authMode: "login", editing: null, pending: false, saving: false };
@@ -150,7 +152,10 @@ function refreshInputs() {
     $("b-help").textContent = `1–${n - 1} · a call stops when its size ≤ b`;
   }
   const help = { fixed: "Earlier numeric task ID first.", longest: "Larger duration first. Ties use task ID.", critical: "Larger remaining dependency-path duration first. Ties use task ID." };
-  $("policy-help").textContent = help[$("policy").value] + (map && $("policy").value === "longest" ? " For Map, longest task and critical path priorities are equivalent." : "");
+  $("policy-help").replaceChildren(help[$("policy").value]);
+  if (map && $("policy").value === "longest") {
+    $("policy-help").append(" ", element("br"), "For Map, longest task and critical path priorities are equivalent.");
+  }
   let validParameters = false;
   try {
     const input = parameters();
@@ -275,7 +280,7 @@ function renderDag() {
   const tasks = state.experiment.dag, layers = [], levels = new Map();
   for (const task of tasks) { const level = Math.max(-1, ...task.dependencies.map((dep) => levels.get(dep))) + 1; levels.set(task.id, level); (layers[level] ||= []).push(task); }
   const width = Math.max(600, Math.max(...layers.map((layer) => layer.length)) * 170 + 30), height = layers.length * 110 + 20;
-  const canvas = svg("svg", { viewBox: `0 0 ${width} ${height}`, width, height, class: "dag-svg", role: "group", "aria-label": "Generated computation dependency graph" });
+  const canvas = svg("svg", { viewBox: `0 0 ${width} ${height}`, width: width * 0.8925, height: height * 0.8925, class: "dag-svg", role: "group", "aria-label": "Generated computation dependency graph" });
   const defs = svg("defs"), marker = svg("marker", { id: "dag-arrow", markerWidth: 7, markerHeight: 7, refX: 6, refY: 3.5, orient: "auto" });
   marker.append(svg("path", { d: "M0 0L7 3.5L0 7Z", fill: "#a4b3a7" })); defs.append(marker); canvas.append(defs);
   const positions = new Map();

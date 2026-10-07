@@ -15,8 +15,11 @@ policies, missing parameters, and out-of-range values. The UI mirrors these limi
 Splitting uses `small = min((m+k-1)//k, m//2)`, `large = m-small`, implementing
 the specified balanced rounding with integer arithmetic. Both children are
 positive and smaller than their parent, so recursion terminates at b ≥ 1.
-Numeric IDs are deterministic preorder: split, the entire left computation,
-the entire right computation, then combine. A split precedes both child entries;
+Numeric IDs are breadth-first by dependency level: roots are at level zero,
+and each task is one level after its deepest prerequisite. Within a level,
+tasks are numbered left to right in recursion-tree order, including combines
+in unbalanced trees. Recursion depth remains separate metadata. All dependency
+references and scheduling tie breakers use these IDs. A split precedes both child entries;
 a combine waits for both child terminal tasks. No user-defined edges are accepted.
 
 A binary recursion tree with L leaves has L−1 internal calls, hence
@@ -120,8 +123,10 @@ experiments disappear from retrieval, but historical bytes remain in the log.
 
 Replay validates schema, IDs, usernames/hashes, ownership, names, timestamps,
 configuration, generated DAG/ranks, and deterministic results. Simulator version
-1.0.0 is supported; changing the algorithm requires an explicit log migration
-before incompatible records load. Reads are linear in historical log size and
+1.1.0 uses dependency-level IDs. Version 1.0.0 records are validated with their
+original recursive IDs, then regenerated in memory with the current numbering
+and schedules when loaded. Historical log bytes remain unchanged; future
+versions still require explicit compatibility support. Reads are linear in historical log size and
 verify small schedules; this is a course-scale design. Compaction/indexing are
 future work, and deletion still consumes disk space.
 

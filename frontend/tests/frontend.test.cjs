@@ -116,6 +116,9 @@ test("initial Map results, shared axis, task selection, and JSON key-order equal
     assert.equal(page.get("stale-note").hidden, true);
     assert.equal(page.get("save-button").disabled, false);
     assert.equal(page.get("comparison").children.length, 2);
+    const resultPanels = [...page.get("result-content").children];
+    assert.ok(resultPanels.indexOf(page.get("comparison").closest("section")) <
+      resultPanels.indexOf(page.get("timeline").closest("section")));
     assert.deepEqual(Array.from(page.get("policy").options, (option) => [option.value, option.textContent]), [
       ["fixed", "Fixed order"], ["longest", "Longest Task First / Critical Path First"],
     ]);
@@ -198,9 +201,32 @@ test("D&C generated task count, joins, collapsible graph, and validation", async
     assert.equal(page.get("timeline").querySelectorAll(".processor-label").length, 3);
     page.get("dag-panel").open = true;
     assert.equal(page.get("dag").querySelectorAll(".task-node").length, 22);
+    const graphNodes = [...page.get("dag").querySelectorAll(".task-node")];
+    assert.deepEqual(graphNodes.map((node) => Number(node.dataset.taskId)), Array.from({ length: 22 }, (_, i) => i + 1));
+    const positions = graphNodes.map((node) => {
+      const rect = node.querySelector("rect");
+      return { x: Number(rect.getAttribute("x")), y: Number(rect.getAttribute("y")) };
+    });
+    assert.ok(positions.every((pos, i) => i === 0 || pos.y > positions[i - 1].y ||
+      (pos.y === positions[i - 1].y && pos.x > positions[i - 1].x)), "IDs ascend by dependency level and left to right");
+    page.get("dag").querySelector("[data-task-id='3']").dispatchEvent(new page.window.MouseEvent("click", { bubbles: true }));
+    assert.match(page.get("task-detail").textContent, /T3 · Split · size 5/);
+    assert.match(page.get("task-detail").textContent, /DependenciesT1Processor/);
     page.get("dag").querySelector("[data-task-id='22']").dispatchEvent(new page.window.MouseEvent("click", { bubbles: true }));
     assert.match(page.get("task-detail").textContent, /Combine/);
-    assert.match(page.get("task-detail").textContent, /DependenciesT\d+, T\d+/);
+    assert.match(page.get("task-detail").textContent, /DependenciesT18, T21/);
+    for (const index of [0, 1, 2]) {
+      page.get("comparison").querySelectorAll("button")[index].click();
+      for (const graphNode of page.get("dag").querySelectorAll(".task-node")) {
+        const timelineNode = page.get("timeline").querySelector(`[data-task-id='${graphNode.dataset.taskId}']`);
+        assert.equal(timelineNode.getAttribute("aria-label"), graphNode.getAttribute("aria-label"));
+      }
+      const timelineJoin = page.get("timeline").querySelector("[data-task-id='22']");
+      timelineJoin.dispatchEvent(new page.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      assert.equal(page.get("dag").querySelector("[data-task-id='22']").getAttribute("aria-pressed"), "true");
+      assert.match(page.get("task-detail").textContent, /T22 · Combine · size 8/);
+      assert.match(page.get("task-detail").textContent, /DependenciesT18, T21/);
+    }
     page.get("dag-panel").open = false;
     assert.ok(page.get("timeline").querySelector("svg"));
     input(page, "processors", 22);

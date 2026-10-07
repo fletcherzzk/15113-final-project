@@ -16,7 +16,10 @@ from uuid import uuid4
 
 import portalocker
 
-from .simulation import SIMULATOR_VERSION, analyze_graph, parse_configuration
+from .simulation import (
+    SIMULATOR_VERSION, SUPPORTED_SIMULATOR_VERSIONS, analyze_graph,
+    parse_configuration, run_experiment,
+)
 
 
 class StorageError(RuntimeError):
@@ -87,6 +90,11 @@ class EventStore:
                         self._validate_experiment(data, users)
                         if data["id"] in experiments:
                             raise ValueError("Duplicate experiment")
+                        # Validate legacy results before regenerating with current IDs.
+                        # Upgrade only the replayed view; historical bytes stay intact.
+                        if data["simulator_version"] != SIMULATOR_VERSION:
+                            data["experiment"] = run_experiment(data["configuration"])
+                            data["simulator_version"] = SIMULATOR_VERSION
                         experiments[data["id"]] = data
                     elif kind in ("experiment_renamed", "experiment_deleted"):
                         saved = experiments.get(data.get("id"))
@@ -125,15 +133,18 @@ class EventStore:
         if data.get("owner_id") not in users:
             raise ValueError("Unknown experiment owner")
         experiment_name(data.get("name"))
-        config, tasks = parse_configuration(data.get("configuration"))
+        version = data.get("simulator_version")
+        if version not in SUPPORTED_SIMULATOR_VERSIONS:
+            raise ValueError("Unsupported simulator version; migrate records before upgrading")
+        config, tasks = parse_configuration(data.get("configuration"), simulator_version=version)
         if config != data["configuration"]:
             raise ValueError("Invalid stored configuration")
         datetime.fromisoformat(data["created_at"])
         result = data.get("experiment")
         if not isinstance(result, dict) or result.get("configuration") != config:
             raise ValueError("Invalid stored experiment")
-        if data.get("simulator_version") != SIMULATOR_VERSION or result.get("simulator_version") != SIMULATOR_VERSION:
-            raise ValueError("Unsupported simulator version; migrate records before upgrading")
+        if result.get("simulator_version") != version:
+            raise ValueError("Inconsistent stored simulator version")
         dag = result.get("dag")
         if not isinstance(dag, list) or len(dag) != len(tasks):
             raise ValueError("Invalid stored DAG")
@@ -147,7 +158,7 @@ class EventStore:
         comparisons = result.get("comparisons")
         if not isinstance(comparisons, dict) or set(comparisons) != set(POLICIES):
             raise ValueError("Invalid stored comparisons")
-        # Version 1 uses the deterministic simulator as a strict record validator.
+        # Validate schedules using the task numbering of the stored version.
         for policy in POLICIES:
             if comparisons[policy] != simulate(tasks, config["processors"], policy):
                 raise ValueError("Invalid stored schedule")

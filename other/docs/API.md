@@ -75,7 +75,7 @@ overhead, or ownership. Responses contain:
 | Field | Contents |
 | --- | --- |
 | `configuration` | Canonical form, parameters, processor count, policy |
-| `simulator_version` | `1.0.0` |
+| `simulator_version` | `1.1.0` |
 | `dag` | Task `id`, `type`, `duration`, `dependencies`, `size`, `depth`, `rank` |
 | `results` | Selected policy result |
 | `comparisons` | Results keyed by all three policies |
@@ -85,6 +85,12 @@ entries contain `task_id`, `processor_id`, `start`, `end`; IDs start at 1. Idle
 entries contain `processor_id`, `start`, `end`. Metrics are `work`, `span`,
 `average_parallelism`, `makespan`, `speedup`, `utilization` (fraction), and
 `lower_bound`. Time/duration values are simulated units.
+
+D&C task IDs ascend by dependency level, left to right within each level.
+Each task's level is one greater than the maximum level of its prerequisites;
+`depth` still describes recursion depth. DAG dependencies, schedules, and policy
+tie breakers use the same IDs. Loading a version 1.0.0 save validates its original
+results and regenerates them with version 1.1.0 IDs without rewriting the log.
 
 ## Private experiments
 

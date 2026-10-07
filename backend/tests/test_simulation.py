@@ -83,6 +83,31 @@ def test_small_dc_manual_schedule():
     assert_schedule(tasks, 2, result)
 
 
+def test_balanced_dc_breadth_first_ids_and_policy_ties():
+    tasks = generate_dc(8, 2, 1, 1, 1, 1)
+    assert [task.type for task in tasks] == ["split"] * 7 + ["base"] * 8 + ["combine"] * 7
+    assert [task.dependencies for task in tasks] == [
+        (), (1,), (1,), (2,), (2,), (3,), (3,),
+        (4,), (4,), (5,), (5,), (6,), (6,), (7,), (7,),
+        (8, 9), (10, 11), (12, 13), (14, 15), (16, 17), (18, 19), (20, 21),
+    ]
+    for policy in POLICIES:
+        result = simulate(tasks, 1, policy)
+        # Equal duration/rank siblings break ties with their new IDs.
+        assert [entry["task_id"] for entry in result["timeline"]] == list(range(1, 23))
+
+
+def test_unbalanced_dc_numbers_combines_by_dependency_level():
+    tasks = generate_dc(5, 2, 1, 1, 3, 1)
+    assert [(task.type, task.size, task.dependencies) for task in tasks] == [
+        ("split", 5, ()), ("split", 2, (1,)), ("split", 3, (1,)),
+        ("base", 1, (2,)), ("base", 1, (2,)), ("base", 1, (3,)), ("split", 2, (3,)),
+        ("combine", 2, (4, 5)), ("base", 1, (7,)), ("base", 1, (7,)),
+        ("combine", 2, (9, 10)), ("combine", 3, (6, 11)), ("combine", 5, (8, 12)),
+    ]
+    assert [entry["task_id"] for entry in simulate(tasks, 1, "fixed")["timeline"]] == list(range(1, 14))
+
+
 @pytest.mark.parametrize("n,k,children", [(8, 3, [3, 5]), (5, 2, [2, 3]), (3, 4, [1, 2])])
 def test_split_rounding(n, k, children):
     tasks = generate_dc(n, k, n - 1, 1, 1, 1)
@@ -95,6 +120,12 @@ def test_all_supported_dc_shapes_and_scheduling_invariants():
             for b in range(1, n):
                 tasks = generate_dc(n, k, b, 2, 5, 3)
                 assert len(tasks) <= 22
+                assert [task.id for task in tasks] == list(range(1, len(tasks) + 1))
+                levels = {}
+                for task in tasks:
+                    assert all(dep < task.id for dep in task.dependencies)
+                    levels[task.id] = 1 + max((levels[dep] for dep in task.dependencies), default=-1)
+                assert list(levels.values()) == sorted(levels.values())
                 by_id = {task.id: task for task in tasks}
                 assert len([task for task in tasks if task.type == "base"]) <= n
                 for task in tasks:

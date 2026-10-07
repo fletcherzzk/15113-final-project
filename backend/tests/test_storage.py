@@ -4,7 +4,7 @@ import json
 import pytest
 from werkzeug.security import generate_password_hash
 
-from lab.simulation import run_experiment
+from lab.simulation import SIMULATOR_VERSION, run_experiment
 from lab.storage import ConflictError, EventStore, StorageError
 
 
@@ -63,3 +63,41 @@ def test_tampered_stored_results_rejected(tmp_path):
     path.write_text("".join(json.dumps(record) + "\n" for record in records))
     with pytest.raises(StorageError):
         store.list_experiments(user["id"])
+
+
+@pytest.mark.parametrize("form", ["map", "dc"])
+def test_legacy_saves_load_with_current_ids_without_rewriting_log(tmp_path, form):
+    path = tmp_path / "records.jsonl"
+    store = EventStore(path)
+    user = store.create_user("alice", generate_password_hash("password123"))
+    config = CONFIG if form == "dc" else {
+        "form": "map", "parameters": {"durations": [2, 5, 3]}, "processors": 2, "policy": "fixed",
+    }
+    legacy = run_experiment(config, simulator_version="1.0.0")
+    saved = store.create_experiment(user["id"], "Legacy", legacy)
+    original = path.read_bytes()
+    restored = EventStore(path).get_experiment(user["id"], saved["id"])
+    assert restored["simulator_version"] == SIMULATOR_VERSION
+    assert restored["experiment"] == run_experiment(config)
+    assert path.read_bytes() == original
+    assert store.list_experiments(user["id"])[0] == restored
+    store.rename_experiment(user["id"], saved["id"], "Renamed")
+    assert store.get_experiment(user["id"], saved["id"])["name"] == "Renamed"
+    assert path.read_bytes().startswith(original)
+    store.create_experiment(user["id"], "New", run_experiment(config))
+    store.delete_experiment(user["id"], saved["id"])
+    assert [record["name"] for record in store.list_experiments(user["id"])] == ["New"]
+
+
+def test_tampered_legacy_save_is_rejected_before_upgrade(tmp_path):
+    path = tmp_path / "records.jsonl"
+    store = EventStore(path)
+    user = store.create_user("alice", generate_password_hash("password123"))
+    store.create_experiment(user["id"], "Legacy", run_experiment(CONFIG, simulator_version="1.0.0"))
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    records[1]["data"]["experiment"]["dag"][1]["dependencies"] = []
+    path.write_text("".join(json.dumps(record) + "\n" for record in records))
+    original = path.read_bytes()
+    with pytest.raises(StorageError):
+        store.get_experiment(user["id"], records[1]["data"]["id"])
+    assert path.read_bytes() == original
