@@ -1,4 +1,4 @@
-I used chatgpt 6.1sol IDE version for this project.
+I used chatgpt 6.1sol IDE version for this project. Basically for generating everything.
 
 First I wrote a spec together with AI to pin down all implementations.
 I set the strategy, design, benchmarks for AI
@@ -475,6 +475,7 @@ So please read the current code and then make the changes
 
 
 
-
+Where AI did wrong: 
+AI did not separate frontend and backend
 
 
