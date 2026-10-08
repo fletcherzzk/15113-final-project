@@ -1,21 +1,72 @@
-# Parallel Scheduling Lab
+﻿# Parallel Scheduling Lab
 
-A static frontend and Flask API for exploring the work–span model with **Map** and
-**Divide-and-Conquer** computations. Configure a computation, simulate it,
-inspect an aligned processor timeline, and compare scheduling heuristics. Map
-shows **Fixed order** and **Longest Task First / Critical Path First** as two
-options because longest task and critical path priorities are equivalent for
-independent tasks. Divide-and-Conquer keeps all three policies separate.
-Guests can run simulations; accounts can privately save, load, rename, and
-delete experiments.
 
-Implements the core of [the specification](Parallel_Scheduling_Lab_Spec.md).
-Optional overhead, exact optimization, measured durations, size-dependent
-costs, and playback are deferred.
+## AI-generated documentation
 
-## Run locally
+### What the project does
 
-Use Python 3.11 or later. From the repository root:
+Parallel Scheduling Lab is a web app for exploring how task dependencies,
+processor counts, and scheduling rules affect parallel performance. It connects
+the work-span model from 15-210 to schedules you can inspect visually.
+
+The app supports **Map**, with independent tasks of configurable durations, and
+**Divide-and-Conquer**, with recursive split, base-case, and combine tasks.
+The Flask backend generates a dependency graph and simulates scheduling policies.
+The HTML/CSS/JavaScript frontend shows work, span, completion time, speedup,
+utilization, and a theoretical lower bound, alongside processor timelines and
+an interactive dependency graph.
+
+Guests can run simulations. Registered users can privately save, load, rename,
+and delete experiments. The model assumes identical processors, fixed durations,
+and no preemption or scheduling overhead. It compares heuristics rather than
+searching for an optimal schedule. See the [specification](Parallel_Scheduling_Lab_Spec.md).
+
+### How to use it
+
+1. Open the frontend after starting the local servers described below.
+2. Select **Map** or **Divide & conquer**. For Map, enter task durations or choose
+   a preset. For Divide-and-Conquer, set the problem size, split ratio, base-case
+   threshold, and split/base/combine costs.
+3. Choose a processor count with `1 <= P < N`, where `N` is the number of
+   computation tasks, and select a scheduling policy.
+4. Click **Run simulation** to compare policies on the same inputs. Map displays
+   Fixed order and Longest Task First / Critical Path First because the latter
+   priorities are equivalent for independent tasks. Divide-and-Conquer compares
+   all three policies separately.
+5. Use **View** in the comparison table to inspect a schedule. Select a timeline
+   block for task details, or expand **Computation dependencies** and select a node.
+6. Register or log in, name an experiment, and click **Save** to keep it.
+   Saved results appear under **Your experiments**, with load, rename, and delete
+   actions. Saving is explicit; changed inputs require another run before saving.
+
+For example, Map durations `3, 3, 2, 2, 2` on two processors finish in 7 time units
+under both displayed policies, although the lower bound is 6. This illustrates
+why a heuristic's result can differ from a theoretical lower bound.
+
+### Features to consider for your personal reflection
+
+These implemented highlights can help you choose what to discuss. Rewrite the
+ones you are most proud of using your own reasons and experience:
+
+- **Policy comparison:** each run compares scheduling choices on identical inputs,
+  making changes in completion time easy to see.
+- **Interactive visualizations:** processor timelines show assignments and idle
+  time, while the dependency graph explains why tasks must wait for others.
+- **Recursive modeling:** Divide-and-Conquer includes both branching and joining
+  dependencies, so combine tasks wait for their child computations.
+- **Private experiment history:** persistent storage and account ownership checks
+  let users keep their own experiments and revisit them later.
+
+// this is direct use and experiment for me to better learn 15210
+// I am proud of my decisions for implementation details
+
+### Run locally
+
+Install Python 3.11 or later. Run these commands from the repository root.
+Use two terminals: one for the API and one for the frontend. No Node runtime,
+frontend build, or separate database is needed for local use.
+
+On Windows, start the backend:
 
 ```powershell
 python -m venv .venv
@@ -23,7 +74,13 @@ python -m venv .venv
 .venv\Scripts\python.exe backend/app.py
 ```
 
-On macOS/Linux:
+In a second terminal, start the frontend:
+
+```powershell
+.venv\Scripts\python.exe -m http.server 8000 --bind 127.0.0.1 --directory frontend
+```
+
+On macOS/Linux, start the backend:
 
 ```sh
 python3 -m venv .venv
@@ -31,230 +88,96 @@ python3 -m venv .venv
 .venv/bin/python backend/app.py
 ```
 
-No frontend build step, database, or Node runtime
-is required to run the application locally. Flask is **API-only** on port 5000;
-it does not serve HTML, CSS, JavaScript, or the frontend homepage. Local records
-go to `backend/storage/records.jsonl`, which is excluded from Git.
+In a second terminal:
 
-Start the static frontend in a **second terminal**, from the repository root:
-
-```powershell
-.venv\Scripts\python.exe -m http.server 8000 --bind 127.0.0.1 --directory frontend
+```sh
+.venv/bin/python -m http.server 8000 --bind 127.0.0.1 --directory frontend
 ```
 
-On macOS/Linux use `.venv/bin/python` for the same command. Open
-**http://127.0.0.1:8000**. `frontend/config.js` points localhost development to
-`http://127.0.0.1:5000`; Flask allows frontend origins on port 8000 by default.
-Use an HTTP server instead of opening `index.html` as a file. If you change ports,
-update the API URL in `config.js` and set `FRONTEND_ORIGINS` on the backend.
+Open **http://127.0.0.1:8000**. Flask runs on port 5000 and serves only the API.
+Use the HTTP server instead of opening `index.html` directly.
+`frontend/config.js` selects `http://127.0.0.1:5000` for local development.
+If you change ports, update that configuration and set `FRONTEND_ORIGINS` on the
+backend to the frontend's exact origin.
 
-The implementation machine's Python executable and standard library were in
-different locations. An ignored `.runtime/` copy and prepared `.venv/` were used
-for verification there. A normal Python installation does not need `.runtime/`.
+Accounts and experiments are stored in `backend/storage/records.jsonl`, which
+is ignored by Git.
 
-Set a stable `SECRET_KEY` to preserve signed login sessions across backend restarts:
+### How secrets and account data are handled
+
+`SECRET_KEY` is the backend secret used to sign sessions. Set it through your
+shell or hosting provider's environment settings. Keep it out of committed files
+and frontend code. For example, before starting the backend on Windows:
 
 ```powershell
 $env:SECRET_KEY = .venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
 .venv\Scripts\python.exe backend/app.py
 ```
 
-The development fallback creates a random key at startup, so old sessions expire
-on restart while saved accounts and experiments remain on disk. `backend/.env.example`
-documents settings; the app does **not** automatically load `.env` files.
+Without this setting, local development generates a random key at startup.
+Existing sessions then expire on restart, while saved accounts and experiments
+remain. Reuse a stable secret if sessions should survive restarts. Production
+requires a key of at least 32 characters and an absolute `STORAGE_PATH` pointing
+to persistent storage.
 
-## Using the lab
+[`backend/.env.example`](backend/.env.example) documents settings without real
+secrets. The app does **not** automatically load `.env` files.
+`FRONTEND_ORIGINS` and the public API URL are configuration, not secrets.
 
-1. Select Map or Divide & conquer and enter parameters. Map presets are included.
-2. Select a processor count with `1 ≤ P < N`, where N counts computation tasks.
-3. Run. Compare two policy options for Map or three policies for Divide & conquer.
-4. Use **View** in the comparison table to inspect a policy's schedule. Select
-   a timeline block or DAG node for details. The supporting DAG is collapsed initially.
-5. Register or log in, name the experiment, and use **Save**. Running does
-   not save automatically. Changed inputs require a new run before saving.
-6. Saved experiments appear below the lab with load, rename, and delete actions.
+Passwords are stored as Werkzeug password hashes rather than plaintext.
+The frontend keeps signed bearer session tokens in `sessionStorage` for the
+current tab, or in memory if browser storage is unavailable. Tokens are sensitive
+credentials; passwords are not stored in browser storage. Closing the tab clears
+its stored session. Keep account records private and out of Git and the public
+frontend deployment.
 
-The default `[3, 3, 2, 2, 2]` example on two processors finishes in **7** units
-under both displayed Map options. Its lower bound is **6**, attainable by putting the
-two 3-unit tasks on one processor and the three 2-unit tasks on the other.
-The app compares heuristics; it does not search for or claim an optimal schedule.
+### AI use and citations
 
-## Verify
+The [prompt log](promptlog.md) records use of ChatGPT/Codex with the 6.1 Sol model
+in the IDE. The student worked with AI on the specification and provided the
+strategy, design, and benchmarks. According to the existing
+[AI assistance notes](other/docs/AI_ASSISTANCE.md), Codex generated substantial
+portions of the implementation, tests, deployment configuration, and documentation.
+This included scheduling logic, frontend/API integration, accounts and storage,
+the Pages build, CORS handling, and signed header sessions. Codex also drafted
+this README revision. The student should add their own account of what they
+reviewed, verified, and learned.
+
+The AI assistance notes identify official Render, GitHub, Flask, and MDN
+documentation as development references. Relevant deployment references recorded
+in the previous README include
+[Render's Flask deployment guide](https://render.com/docs/deploy-flask),
+[Render persistent disks](https://render.com/docs/disks),
+[Render Blueprint configuration](https://render.com/docs/blueprint-spec), and
+[GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+The repository does not identify a specific adapted outside code excerpt.
+
+### Project files and verification
+
+- `frontend/`: static interface, API configuration, Pages builder, and tests.
+- `backend/`: Flask API, simulation logic, authentication, storage, and tests.
+- `other/`: supporting documentation, Render configuration, and ignored artifacts.
+- `.github/workflows/`: GitHub Actions workflows.
+
+Run backend tests on Windows:
 
 ```powershell
 .venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
 .venv\Scripts\python.exe -m pytest -c backend/pytest.ini -q
 ```
 
-Frontend integration tests additionally require Node 22.13+:
+On macOS/Linux, use `.venv/bin/python` in those commands.
+Frontend/build tests require Node 22.13 or later:
 
 ```sh
 npm --prefix frontend ci
 npm --prefix frontend test
 ```
 
-These use JSDOM to execute the actual frontend JavaScript against independent
-static and Flask servers. They exercise a GitHub Pages-style repository subpath,
-actual CORS preflights, and signed header sessions with all cookies omitted. Test accounts and
-logs live under ignored `other/artifacts/` directories. The server starts/stops
-automatically; a separate running app is unnecessary. Set `PYTHON_EXECUTABLE`
-if Python is outside `.venv/` and `PATH`.
+Further details: [design notes](other/docs/DESIGN.md),
+[API documentation](other/docs/API.md),
+[verification checklist](other/docs/VERIFICATION.md),
+[Render configuration](other/render.yaml), and
+[Pages workflow](.github/workflows/pages.yml).
 
-Verification: **91 backend tests and 7 frontend/build tests passed**, plus
-`node --check frontend/static/app.js`. JSDOM does not verify browser layout, native dialog
-focus, or screenshot quality. No browser surface was available during
-implementation, so browser visual QA remains manual. See
-[the acceptance checklist](docs/VERIFICATION.md).
-
-## Deploy the backend on Render
-
-[`render.yaml`](render.yaml) defines an API-only Python service rooted in `backend/`, Gunicorn, secure
-production settings, and a persistent disk mounted at `/var/data`. Deployment
-has **not** been performed by this implementation.
-
-1. Push this repository to your GitHub account.
-2. In Render, create a **Blueprint** from the repository using `other/render.yaml`
-   as its Blueprint path and review the service
-   and disk before provisioning. The Blueprint selects a paid `starter` service
-   because persistent disks require a paid service.
-3. Keep the generated `SECRET_KEY` stable. `APP_ENV=production` and
-   `STORAGE_PATH=/var/data/records.jsonl` are already defined. Set `FRONTEND_ORIGINS`
-   to your Pages **origin**: `https://fletcherzzk.github.io` for this repository.
-   Do not include `/15113-final-project/` or a trailing slash. If you fork the repo
-   or use a custom domain, change this value. Multiple exact origins can be comma-separated.
-4. Copy the actual Render HTTPS URL, such as `https://your-service.onrender.com`.
-   Check `<Render URL>/api/health`. The backend's `/` and `/static/...` return 404
-   because it only provides API routes.
-5. Deploy the frontend below, then register/save/load an experiment through Pages.
-   Restart and redeploy the backend and verify that saved experiments persist.
-
-Only files under Render's configured disk mount survive redeployment; the rest
-of the filesystem is ephemeral. Keep **one Gunicorn worker with four threads**:
-the authentication limiter shares counters inside one process. Back up the log
-and retain the stable secret in Render's environment settings.
-
-Official references: [Flask deployment](https://render.com/docs/deploy-flask),
-[persistent disks](https://render.com/docs/disks), and
-[Blueprint configuration](https://render.com/docs/blueprint-spec).
-
-## Deploy the frontend on GitHub Pages
-
-All frontend source and build code are in `frontend/`. The workflow
-[`pages.yml`](../.github/workflows/pages.yml) publishes only `index.html`,
-`config.js`, `.nojekyll`, and the static CSS/JS. Backend files, tests,
-`node_modules`, account records, and secrets are never part of the Pages artifact.
-
-1. Push the changes to this repository's `main` branch.
-2. In GitHub **Settings → Pages**, select **GitHub Actions** as the publishing source.
-3. The workflow already sets `API_BASE_URL` to
-   `https://parallel-scheduling-lab.onrender.com`. No repository variable is needed.
-   If the backend address changes, update this value in `.github/workflows/pages.yml`
-   and the hosted API URL in `frontend/config.js` and `frontend/index.html`.
-   This public URL is configuration, not a secret. Never place `SECRET_KEY` in the frontend.
-4. Run **Deploy frontend to GitHub Pages** in Actions. Subsequent frontend changes
-   pushed to `main` also deploy.
-5. Open the deployment URL. For this repository it is expected to be
-   `https://fletcherzzk.github.io/15113-final-project/`. Relative asset/home URLs
-   work under that repository subpath and with a custom domain.
-6. Verify login, reload, policy comparison, save/load/rename/delete, and logout.
-
-The build requires `API_BASE_URL`, writes the Render address into `config.js`, and
-restricts the frontend CSP's `connect-src` to that API origin. It fails before
-publishing if the URL is missing, not HTTPS, or contains a path/credentials.
-No bundler or `npm install` is needed for the deployment build. To inspect it locally:
-
-```powershell
-$env:API_BASE_URL = 'https://parallel-scheduling-lab.onrender.com'
-npm --prefix frontend run build
-```
-
-Output is `other/artifacts/pages/`. GitHub's branch-based Pages source cannot
-publish `frontend/` directly; use the included Actions workflow. Official guide:
-[custom Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-
-The deployment workflows/configuration are prepared, but live deployment has not
-been performed in this session. The frontend is configured for the Render service;
-publishing still needs GitHub settings and account access.
-
-## Cross-origin login and troubleshooting
-
-The frontend fetches `${API_BASE_URL}/api/...` with `credentials: "omit"` and sends
-the signed API session as `Authorization: Bearer <token>`. Flask returns updated
-sessions through `X-Session-Token`. The frontend stores them in **sessionStorage**
-under a key specific to the API origin. Login survives reloads in the same tab;
-closing that tab ends its locally stored session. Passwords are never stored there.
-If browser storage is disabled, login works in memory until reload.
-
-This avoids relying on third-party cookies between `github.io` and `onrender.com`.
-Flask still maintains session identity, rotates CSRF tokens on account operations,
-checks ownership, and expires signed tokens after seven days without renewal.
-Tokens are bearer credentials: frontend scripts can access them, so the static
-site uses restrictive CSP and text-only rendering for user names. No cross-site
-cookies or `Access-Control-Allow-Credentials` are needed.
-
-CORS allows only exact `FRONTEND_ORIGINS`, supports OPTIONS requests for the real
-route methods, permits Authorization/Content-Type/X-CSRF-Token, and exposes
-X-Session-Token/Retry-After. Unknown origins are rejected before mutations.
-If the browser reports CORS errors, compare its **Origin** header to
-`FRONTEND_ORIGINS` (scheme, hostname, and port must match). Verify the generated
-`config.js`, API HTTPS URL, and preflight response in browser developer tools.
-An expired session's CSRF error asks for a refresh; the session endpoint restores
-anonymous access and the user can log in again.
-
-Existing user and experiment files remain compatible. The old cookie-based
-session requires one new login after this change; saved data is preserved.
-
-## Project guide
-
-All application files are grouped into three folders. Commands above run from
-the repository root (the parent of these folders).
-
-```text
-frontend/                HTML, CSS, JavaScript, and frontend tests
-  index.html
-  config.js
-  .nojekyll
-  static/
-  scripts/               Pages artifact builder
-  tests/
-  package.json
-  package-lock.json
-backend/                 Flask, simulation, persistence, and backend tests
-  app.py
-  wsgi.py
-  lab/
-  tests/
-  requirements.txt
-  requirements-dev.txt
-  pytest.ini
-  .env.example
-  storage/               ignored local account/experiment data
-other/                   Specification, documentation, deployment, test artifacts
-  README.md
-  Parallel_Scheduling_Lab_Spec.md
-  docs/
-  render.yaml
-  artifacts/             ignored test outputs
-```
-
-Git configuration and `.github/workflows/` remain at the repository root, where
-Git and GitHub require them. The ignored local Python environment/runtime also
-remain there. Frontend Node dependencies are under `frontend/node_modules/`.
-
-| Component | Responsibility |
-| --- | --- |
-| `backend/lab/simulation.py` | Validation, DAG generation, ranks, scheduling, metrics |
-| `backend/lab/auth.py` | Credential constraints and authentication rate limiting |
-| `backend/lab/storage.py` | Locked append-only JSONL records, validation, replay, ownership |
-| `backend/app.py` | App factory, sessions, CSRF, API routes, security headers |
-| `backend/wsgi.py` | Gunicorn entry point |
-| `frontend/index.html` | Standalone static inputs, results, accounts, and history |
-| `frontend/config.js` | API origin (local default; generated for Pages) |
-| `frontend/scripts/build-pages.cjs` | Public Pages artifact and production CSP |
-| `frontend/static/app.js` | Fetch integration and interactive SVG timelines/DAGs |
-| `frontend/static/styles.css` | Responsive visual layout |
-| `backend/lab/sessions.py` | Signed Flask sessions transported through API headers |
-| `backend/tests/`, `frontend/tests/` | Backend and frontend acceptance tests |
-
-See [design and storage decisions](docs/DESIGN.md), [API documentation](docs/API.md),
-and [AI assistance and study notes](docs/AI_ASSISTANCE.md).
+This file is written by AI. 
