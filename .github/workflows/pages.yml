@@ -29,7 +29,7 @@ jobs:
       - name: Build public frontend assets
         run: npm --prefix frontend run build
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          API_BASE_URL: https://parallel-scheduling-lab.onrender.com
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

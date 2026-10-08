@@ -146,13 +146,13 @@ All frontend source and build code are in `frontend/`. The workflow
 
 1. Push the changes to this repository's `main` branch.
 2. In GitHub **Settings → Pages**, select **GitHub Actions** as the publishing source.
-3. In **Settings → Secrets and variables → Actions → Variables**, add the repository
-   variable `API_BASE_URL` with the actual Render HTTPS **origin**, e.g.
-   `https://your-service.onrender.com`. Do not append `/api`. This public URL is
-   configuration, not a secret. Never place `SECRET_KEY` in the frontend or this variable.
+3. The workflow already sets `API_BASE_URL` to
+   `https://parallel-scheduling-lab.onrender.com`. No repository variable is needed.
+   If the backend address changes, update this value in `.github/workflows/pages.yml`
+   and the hosted API URL in `frontend/config.js` and `frontend/index.html`.
+   This public URL is configuration, not a secret. Never place `SECRET_KEY` in the frontend.
 4. Run **Deploy frontend to GitHub Pages** in Actions. Subsequent frontend changes
-   pushed to `main` also deploy. If you change the variable without changing files,
-   rerun the workflow manually.
+   pushed to `main` also deploy.
 5. Open the deployment URL. For this repository it is expected to be
    `https://fletcherzzk.github.io/15113-final-project/`. Relative asset/home URLs
    work under that repository subpath and with a custom domain.
@@ -164,7 +164,7 @@ publishing if the URL is missing, not HTTPS, or contains a path/credentials.
 No bundler or `npm install` is needed for the deployment build. To inspect it locally:
 
 ```powershell
-$env:API_BASE_URL = 'https://your-service.onrender.com'
+$env:API_BASE_URL = 'https://parallel-scheduling-lab.onrender.com'
 npm --prefix frontend run build
 ```
 
@@ -173,8 +173,8 @@ publish `frontend/` directly; use the included Actions workflow. Official guide:
 [custom Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
 The deployment workflows/configuration are prepared, but live deployment has not
-been performed in this session. It needs your Render service URL, GitHub settings,
-and account access. Render and GitHub integrations can provide that access if installed/connected.
+been performed in this session. The frontend is configured for the Render service;
+publishing still needs GitHub settings and account access.
 
 ## Cross-origin login and troubleshooting
 
